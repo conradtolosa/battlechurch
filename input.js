@@ -810,8 +810,9 @@
   // Every finger is tracked separately, so two-thumb play works too.
   const ABC_CHARGE_FALLBACK_MS = { A: 1500, B: 1500, C: 1000 };
   const ABC_HIT_RADIUS_SCALE = 1.3;
-  // Six-slice pad geometry (must match the SVG in index.html), like a D-pad
-  // with diagonals. Angles are degrees, 0 = right, 90 = down; anything below
+  // Pad geometry. It LOOKS like three buttons (index.html), but works like a
+  // D-pad with diagonals: these are the single-button zones, and the hidden
+  // two-button zones straddle each visible border. Angles are degrees, 0 = right, 90 = down; anything below
   // -130 is shifted by +360 so B and B+C stay continuous.
   const ABC_PAD_CX = 130;
   const ABC_PAD_CY = 130;
@@ -825,6 +826,9 @@
   };
   // Within this radius of the center = press all three.
   const ABC_PAD_CENTER_R = 24;
+  // What the player sees: three equal slices (used to draw the charge
+  // meters along each button's edge). The hidden zones above sit inside them.
+  const ABC_PAD_VISIBLE = { C: [-150, -30], A: [-30, 90], B: [90, 210] };
   // On a slide, how long both buttons are held together before the first
   // one is released.
   const ABC_SLIDE_OVERLAP_MS = 30;
@@ -851,7 +855,7 @@
     const rings = {};
     const subLabels = {};
     const rimArcPath = (seg, radius) => {
-      const [a0, a1] = ABC_PAD_WEDGES[seg];
+      const [a0, a1] = ABC_PAD_VISIBLE[seg];
       const pad = 5; // degrees of breathing room at each end
       const p = (deg) => {
         const t = (deg * Math.PI) / 180;

@@ -1973,38 +1973,6 @@ body.touch-enabled #arcControl .arc-junction {
   stroke-width: 2px;
 }
 
-/* Six-slice pad: the smaller "both" slices between the main buttons (like a
-   D-pad's diagonals). Colours blend their two buttons. */
-.abc-diag {
-  stroke: rgba(10, 15, 31, 0.85);
-  stroke-width: 2px;
-  opacity: 0.85;
-  transition: opacity 0.1s ease-out, filter 0.1s ease-out;
-}
-
-.abc-diag-ab { fill: #9FD9F2; }
-.abc-diag-ac { fill: #C79BC4; }
-.abc-diag-bc { fill: #E2A6B0; }
-
-.abc-diag.is-active,
-.arc-junction.is-active {
-  opacity: 1;
-  filter: drop-shadow(0 0 12px var(--arc-glow));
-}
-
-.abc-diag-label {
-  fill: rgba(10, 15, 31, 0.85);
-  font-family: var(--ui-font-family);
-  font-size: 15px;
-  font-weight: 800;
-  text-anchor: middle;
-  dominant-baseline: middle;
-  pointer-events: none;
-}
-
-body.touch-enabled #arcControl .abc-diag {
-  pointer-events: auto;
-}
 
 /* Movement stick (reimagined): a circular 8-way pad that rests at a home
    spot mirroring the action pad and floats under the thumb when touched
