@@ -2740,6 +2740,12 @@
     const level3Threshold =
       typeof PRAYER_BOMB_LEVEL3_THRESHOLD === "number" ? PRAYER_BOMB_LEVEL3_THRESHOLD : 1.0;
     if (!forceLevel3 && ratio < level1Threshold) return false;
+    // One C release used to reach two separate Purify paths (the player's
+    // charged-release check and the melee combo system), casting it twice
+    // and costing double prayer. Ignore a second Purify right after one.
+    const castNowMs = typeof performance !== "undefined" ? performance.now() : Date.now();
+    if (!forceLevel3 && castNowMs - (this._lastPurifyCastAt || 0) < 400) return false;
+    if (!forceLevel3) this._lastPurifyCastAt = castNowMs;
     // Design choice: there is no separate runtime "level 1" Purify anymore.
     // Any non-full cast resolves to level 2 values; level 3 only when forced.
     const level = forceLevel3 ? 3 : 2;

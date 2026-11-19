@@ -766,8 +766,23 @@
       ring.__circumference = circumference;
       el.parentNode.insertBefore(ring, el);
       rings[seg] = ring;
+      // Recharge ring (cooldowns, e.g. B after a Dash); driven by game.js.
+      const cooldownRing = document.createElementNS(SVG_NS, "circle");
+      cooldownRing.setAttribute("cx", el.getAttribute("cx"));
+      cooldownRing.setAttribute("cy", el.getAttribute("cy"));
+      cooldownRing.setAttribute("r", String(r + 7));
+      cooldownRing.setAttribute("class", "abc-cooldown-ring");
+      cooldownRing.setAttribute("data-seg", seg);
+      cooldownRing.setAttribute("transform", `rotate(-90 ${el.getAttribute("cx")} ${el.getAttribute("cy")})`);
+      cooldownRing.style.strokeDasharray = String(circumference);
+      cooldownRing.style.strokeDashoffset = String(circumference);
+      cooldownRing.__circumference = circumference;
+      el.parentNode.insertBefore(cooldownRing, ring);
       const sub = arcEl.querySelector(`.abc-sub[data-seg="${seg}"]`);
-      if (sub) subLabels[seg] = { el: sub, text: sub.textContent };
+      if (sub) {
+        subLabels[seg] = { el: sub, text: sub.textContent };
+        sub.setAttribute("data-label", sub.textContent);
+      }
     });
     const segmentMap = {
       A: { key: "ArrowLeft", setNesA: true },
@@ -981,7 +996,6 @@
 
       if (state.held.has(seg)) return; // slid back onto a button we're still holding
       const prevCharged = state.held.has(prev) && isCharged(prev, state.pressedAt[prev]);
-      queueSwipeIfUsed(prev, seg);
       if (prevCharged) {
         // "Charge X + Y": keep X held and hold Y too (hold Y until it glows
         // for Thrash / Hedge; keep sliding for Prayer Storm).
@@ -989,6 +1003,8 @@
         refresh();
         return;
       }
+      // Only quick (uncharged) slides are sequence combos like Smash/Clash.
+      queueSwipeIfUsed(prev, seg);
       overlapInto(state, prev, seg);
     };
 
@@ -1007,8 +1023,19 @@
         clearTimeout(state.pendingTimer);
         tapSeg(seg);
       }
-      state.held.forEach((seg) => releaseSeg(seg));
+      // Release order matters for charge moves that use C: Trash and Hedge
+      // fire when B / A is let go while C is still held, so let C go a moment
+      // later. (Prayer Storm, with all three held, works in any order.)
+      const heldNow = Array.from(state.held);
       state.held.clear();
+      const cLast = heldNow.includes("C") && heldNow.length === 2;
+      heldNow.filter((seg) => !(cLast && seg === "C")).forEach((seg) => releaseSeg(seg));
+      if (cLast) {
+        setTimeout(() => {
+          releaseSeg("C");
+          refresh();
+        }, ABC_SLIDE_OVERLAP_MS * 2);
+      }
       refresh();
       event.preventDefault();
     };

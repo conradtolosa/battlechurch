@@ -5530,7 +5530,7 @@ let devArenaPickupSlots = [];
 const TUTORIAL_ARENA_BATCH_SIZE = 100;
 const TUTORIAL_ARENA_REINFORCE_THRESHOLD = 50;
 const TUTORIAL_ARENA_PRAYER_REFILL_MS = 4000;
-const TUTORIAL_ARENA_MOVE_CONTEXT_WINDOW_MS = 1500;
+const TUTORIAL_ARENA_MOVE_CONTEXT_WINDOW_MS = 2500;
 const TUTORIAL_ARENA_SLASH_KILL_WINDOW_MS = 500;
 const TUTORIAL_ARENA_CLEAVE_KILL_WINDOW_MS = 500;
 // Tutorial chapters. "card" steps pause the action and explain what comes
@@ -5555,8 +5555,19 @@ const TUTORIAL_ARENA_OBJECTIVES = [
   // 3. One button at a time (auto-fire is paused during move drills, so only
   //    the move being learned counts)
   { type: "kill_with_move", move: "Slash", target: 100, label: "A is your Sword. Slash 100 demons (A)" },
-  { type: "dash_plus_kills", move: "Dash", dashTarget: 3, killTarget: 0, label: "B is your Dash. Dash 3 times (B)" },
-  { type: "kill_with_move", move: "Unity Strike", target: 100, label: "C is Prayer. Tap C for a Unity Strike (C)" },
+  {
+    type: "card",
+    label: "Cooldowns",
+    body: "Some moves need a moment to recharge. After a Dash, the B meter under your pastor empties and refills. Wait for it to fill before you Dash again.",
+    touchBody: "Some moves need a moment to recharge. After a Dash, the B button dims, says WAIT and refills like a ring. When it's bright again, you can Dash again.",
+  },
+  { type: "dash_plus_kills", move: "Dash", dashTarget: 3, killTarget: 0, label: "Dash 3 times. Wait for B to recharge in between (B)" },
+  {
+    type: "kill_with_move",
+    move: "Unity Strike",
+    target: 100,
+    label: "C is Prayer. Tap C for a Unity Strike (C)",
+  },
   // 4. Charging
   {
     type: "card",
@@ -5567,16 +5578,17 @@ const TUTORIAL_ARENA_OBJECTIVES = [
   { type: "kill_with_move", move: "Blast", target: 100, label: "Charge A until full, then let go: Blast (Charge A)" },
   { type: "kill_with_move", move: "Crash", target: 100, label: "Charge B until full, then let go: Crash (Charge B)" },
   { type: "kill_with_move", move: "Purify", target: 100, label: "Charge C until full, then let go: Purify (Charge C)" },
-  // 5. Combos
+  // 5. Quick combos
   {
     type: "card",
     label: "Combos",
-    body: "Press one button, then quickly press another, to combo. Combos hit two to three times harder than a single slash, and they're how you beat tough enemies.",
-    touchBody: "Slide your thumb quickly from one button to another to combo. Combos hit two to three times harder than a single slash, and they're how you beat tough enemies.",
+    body: "Press one button, then quickly press another, to combo. Combos hit two to three times harder than a single slash. Combos that use B share the Dash cooldown, so wait for B to recharge between them.",
+    touchBody: "Slide your thumb quickly from one button to another to combo. Combos hit two to three times harder than a single slash. Combos that use B share the Dash cooldown: wait for the B button to brighten between them.",
   },
-  { type: "kill_with_move", move: "Smash", target: 100, label: "Smash: B then A (B -> A)" },
-  { type: "kill_with_move", move: "Cleave", target: 100, label: "Cleave: A then B (A -> B)" },
+  { type: "kill_with_move", move: "Smash", target: 100, label: "Smash: B then A. Wait for B to recharge between (B -> A)" },
+  { type: "kill_with_move", move: "Cleave", target: 100, label: "Cleave: A then B. Wait for B to recharge between (A -> B)" },
   { type: "kill_with_move", move: "Reap", target: 100, label: "Reap: C then A (C -> A)" },
+  { type: "kill_with_move", move: "Clash", target: 100, label: "Clash: C then B (C -> B)" },
   // 6. Why it matters
   {
     type: "card",
@@ -5584,21 +5596,55 @@ const TUTORIAL_ARENA_OBJECTIVES = [
     body: "Armor shrugs off auto-fire. Get close and use your sword and combos to break through.",
   },
   { type: "kill_armored", target: 3, label: "Defeat 3 armored demons with your sword and combos" },
-  // 7. Advanced (optional)
-  {
-    type: "card",
-    label: "You're ready to fight",
-    body: "That's everything you need. Press Continue to practice advanced combos, or Skip to start playing. Every move is listed under Pause > Moves.",
-  },
-  { type: "kill_with_move", move: "Clash", target: 100, label: "Clash: C then B (C -> B)" },
+  // 7. Two-button charges (advanced, optional)
   {
     type: "card",
     label: "Charge two at once",
-    body: "The strongest moves charge two buttons together. Hold both buttons down until BOTH charge meters are full, then let go.",
-    touchBody: "The strongest moves charge two buttons together. Hold one until it says READY, then slide onto the other (or press it with another finger) and hold until that says READY too. Then let go.",
+    body: "Advanced moves charge two buttons together. Hold BOTH buttons down until BOTH charge meters are full, then let go. These are optional: press Continue to practice them, or Skip to start playing.",
+    touchBody: "Advanced moves charge two buttons together. Hold one until it says READY, then slide onto the other (or press it with another finger) and hold until that says READY too. Then let go. These are optional: Continue to practice, or Skip to start playing.",
   },
   { type: "kill_with_move", move: "Thrash", target: 100, label: "Thrash: charge B and A together (Charge B + A)" },
+  { type: "kill_with_move", move: "Hedge", target: 100, label: "Hedge: charge A and C together (Charge A + C)" },
+  { type: "kill_with_move", move: "Trash", target: 100, label: "Trash: charge B, then hold C too (Charge B + C)" },
   { type: "kill_with_move", move: "Prayer Storm", target: 100, label: "Prayer Storm: charge A, B and C together (Charge A + B + C)" },
+  // 8. Combo strings
+  {
+    type: "card",
+    label: "Combo strings",
+    body: "String moves together on the same demons: each hit within a moment of the last builds a Hit Chain, and every 4th hit knocks them down. Start with A: it needs no meter. Then use a move that does, and finish with A while it refills.",
+  },
+  {
+    type: "combo_string",
+    sequence: ["Slash", "Smash", "Slash"],
+    inputs: "A, B then A, A",
+    target: 3,
+    label: "Combo string: Slash, Smash, Slash",
+  },
+  {
+    type: "combo_string",
+    sequence: ["Slash", "Reap", "Slash"],
+    inputs: "A, C then A, A",
+    target: 3,
+    label: "Combo string: Slash, Reap, Slash",
+  },
+  {
+    type: "combo_string",
+    sequence: ["Blast", "Slash", "Smash", "Slash"],
+    inputs: "Charge A, A, B then A, A",
+    target: 3,
+    label: "Combo string: Blast, Slash, Smash, Slash",
+  },
+  {
+    type: "card",
+    label: "Combos to try",
+    body: "Slash, Smash, Slash (A, B>A, A).   Slash, Reap, Slash (A, C>A, A).   Blast, Slash, Smash, Slash (charge A, A, B>A, A).   Bonus: hit a demon right after its attack misses for a Counter Hit. The rest of that chain does extra damage.",
+  },
+  // 9. Done
+  {
+    type: "card",
+    label: "You're ready to fight",
+    body: "That's everything. Every move is listed under Pause > Moves. Press Continue to start playing.",
+  },
 ];
 // The tutorial is forced the first time a player picks a save; this remembers
 // (per browser) that they've seen it so it only happens once.
@@ -5609,6 +5655,8 @@ let tutorialArenaExitContinuation = null;
 // True while the tutorial was forced on a first-time player.
 let tutorialArenaFirstRun = false;
 const TUTORIAL_ARENA_ARMORED_TYPE = "armoredSkeleton";
+// Combo string drills: max gap between one move and the next.
+const TUTORIAL_ARENA_COMBO_STRING_GAP_MS = 2500;
 // Auto-fire barely scratches these (see Enemy.takeDamage in entities.js), so
 // the lesson "use your sword and combos" is unmistakable.
 const TUTORIAL_ARENA_ARMORED_HEALTH = 700;
@@ -5888,7 +5936,7 @@ function updateTutorialArenaHudState() {
   window.__tutorialArenaBlockAutoFire = Boolean(
     isTutorialArenaActive() &&
     !tutorialArenaState?.pendingStart &&
-    tutorialArenaState?.currentObjective?.type === "kill_with_move",
+    ["kill_with_move", "combo_string"].includes(tutorialArenaState?.currentObjective?.type),
   );
   if (!isTutorialArenaActive()) {
     window.__tutorialArenaHud = null;
@@ -5967,6 +6015,11 @@ function updateTutorialArenaHudState() {
     progressText = objective.killTarget > 0
       ? `Dashes ${tutorialArenaState.dashCount}/${objective.dashTarget} | Kills ${tutorialArenaState.anyKillCount}/${objective.killTarget}`
       : `Dashes ${tutorialArenaState.dashCount}/${objective.dashTarget}`;
+  } else if (objective.type === "combo_string") {
+    const seq = Array.isArray(objective.sequence) ? objective.sequence : [];
+    const step = Math.max(0, Math.min(seq.length - 1, Number(tutorialArenaState.comboStep) || 0));
+    progressText = `${objective.inputs}   |   ${tutorialArenaState.moveKillCount}/${objective.target} done   |   next: ${seq[step] || ""}`;
+    moveKey = "";
   } else if (objective.type === "kill_any" || objective.type === "kill_armored") {
     progressText = `${tutorialArenaState.anyKillCount}/${objective.target}`;
     moveKey = "";
@@ -5990,6 +6043,10 @@ function stepTutorialArenaObjective(delta = 1) {
   if (tutorialArenaState.pendingStart) return;
   const maxIndex = Math.max(0, TUTORIAL_ARENA_OBJECTIVES.length - 1);
   const current = Math.max(0, Number(tutorialArenaState.objectiveIndex) || 0);
+  if (delta > 0 && current === maxIndex && tutorialArenaState.currentObjective?.type === "card") {
+    startTutorialArenaObjective(current + 1); // "Continue" on the last card: done
+    return;
+  }
   const next = Math.max(0, Math.min(maxIndex, current + Math.trunc(delta)));
   if (next === current) return;
   startTutorialArenaObjective(next);
@@ -6195,6 +6252,8 @@ function exitTutorialArenaToPreviousScreen() {
 
 function handleTutorialArenaButtons() {
   if (!isTutorialArenaActive()) return false;
+  // While the pause menu is open it owns taps and Esc (Resume etc.).
+  if (paused) return false;
   // Esc (or controller B on card/start screens) = Back to Game / Skip Tutorial.
   // Handled here because the shared menu-button code would swallow it.
   if (keysJustPressed.has("escape") || keysJustPressed.has("Escape")) {
@@ -6266,6 +6325,8 @@ function startTutorialArenaObjective(index) {
   tutorialArenaState.moveKillCount = 0;
   tutorialArenaState.anyKillCount = 0;
   tutorialArenaState.dashCount = 0;
+  tutorialArenaState.comboStep = 0;
+  tutorialArenaState.comboLastAt = 0;
   tutorialArenaState.movementKeysSeen = { w: false, a: false, s: false, d: false };
   tutorialArenaState.batchSpawned = false;
   tutorialArenaState.completionQueuedAt = 0;
@@ -6292,6 +6353,8 @@ function checkTutorialArenaObjectiveComplete() {
   if (objective.type === "card") return; // cards advance on Continue only
   if (objective.type === "kill_armored") {
     done = tutorialArenaState.anyKillCount >= objective.target;
+  } else if (objective.type === "combo_string") {
+    done = tutorialArenaState.moveKillCount >= objective.target;
   } else if (objective.type === "dash_plus_kills") {
     done = tutorialArenaState.dashCount >= objective.dashTarget && tutorialArenaState.anyKillCount >= objective.killTarget;
   } else if (objective.type === "kill_any") {
@@ -7469,9 +7532,19 @@ const AC_SUPER_PRAYER_BOMB_BLOCK_TIME = 0.3;
 function isPrayerBombInputSuppressed() {
   const meleeState = window._meleeAttackState;
   if (!meleeState) return false;
+  // Letting go of charged C while A or B is also fully charged is part of a
+  // two-button charge move, not Purify.
+  const aFullyCharged =
+    meleeState.buttonDown && meleeState.isCharging &&
+    (meleeState.chargeTimer || 0) >= (meleeState.holdTime || Infinity);
+  const bFullyCharged =
+    meleeState.spinButtonDown && meleeState.spinCharging &&
+    (meleeState.spinChargeTimer || 0) >= (meleeState.spinHoldTime || Infinity);
   return Boolean(
     meleeState.acSuperArmed ||
     meleeState.cConsumedByCombo ||
+    aFullyCharged ||
+    bFullyCharged ||
     (meleeState.acSuperPrayerBombBlockTimer || 0) > 0,
   );
 }
@@ -28623,7 +28696,39 @@ if (typeof window !== "undefined") {
   window.__battlechurchMoveBannerTokens = MOVE_BANNER_TOKENS;
 }
 
+// Combo string drills: advance when the player performs the next move in the
+// sequence soon enough after the previous one.
+function recordTutorialArenaComboMove(moveName) {
+  if (!isTutorialArenaActive() || !tutorialArenaState) return;
+  const objective = tutorialArenaState.currentObjective;
+  if (!objective || objective.type !== "combo_string" || tutorialArenaState.completionQueuedAt > 0) return;
+  const seq = Array.isArray(objective.sequence) ? objective.sequence : [];
+  if (!seq.length) return;
+  const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+  let step = Number(tutorialArenaState.comboStep) || 0;
+  if (step > 0 && now - (Number(tutorialArenaState.comboLastAt) || 0) > TUTORIAL_ARENA_COMBO_STRING_GAP_MS) {
+    step = 0;
+  }
+  if (moveName === seq[step]) {
+    step += 1;
+  } else if (moveName === seq[0]) {
+    step = 1;
+  } else {
+    step = 0;
+  }
+  tutorialArenaState.comboLastAt = now;
+  if (step >= seq.length) {
+    tutorialArenaState.moveKillCount += 1;
+    step = 0;
+    window.FloatingText?.heroSay?.("Combo!", { life: 1.2 });
+  }
+  tutorialArenaState.comboStep = step;
+  updateTutorialArenaHudState();
+  checkTutorialArenaObjectiveComplete();
+}
+
 function showMoveBanner(moveName) {
+  recordTutorialArenaComboMove(moveName);
   const tokens = MOVE_BANNER_TOKENS[moveName];
   if (!tokens) return;
   const now = typeof performance !== "undefined" ? performance.now() : Date.now();
@@ -30953,11 +31058,33 @@ function updateMeleeAttackSystem(dt) {
 
 function updateArcControlCooldowns() {
   if (!arcControl) return;
-  const dashCooling = playerDashState && playerDashState.dashCooldown > 0;
+  const cooldown = Math.max(0, Number(playerDashState?.dashCooldown) || 0);
+  const dashCooling = cooldown > 0;
+  // Track the full length of the current cooldown to show how far it has refilled.
+  if (!dashCooling) {
+    updateArcControlCooldowns.total = 0;
+  } else if (cooldown > (updateArcControlCooldowns.total || 0)) {
+    updateArcControlCooldowns.total = cooldown;
+  }
   const bSegment = arcControl.querySelector(".arc-segment.arc-b");
   const bLabel = arcControl.querySelector(".arc-label[data-seg=\"B\"]");
   if (bSegment) bSegment.classList.toggle("is-cooldown", dashCooling);
   if (bLabel) bLabel.classList.toggle("is-cooldown", dashCooling);
+  // Touch: a ring refills around B and its caption reads WAIT until it's ready.
+  const ring = arcControl.querySelector(".abc-cooldown-ring[data-seg=\"B\"]");
+  if (ring && ring.__circumference) {
+    const refilled = dashCooling
+      ? 1 - cooldown / Math.max(0.001, updateArcControlCooldowns.total || cooldown)
+      : 0;
+    ring.style.strokeDashoffset = String(ring.__circumference * (1 - refilled));
+    ring.classList.toggle("is-visible", dashCooling);
+  }
+  const sub = arcControl.querySelector(".abc-sub[data-seg=\"B\"]");
+  const held = bSegment && bSegment.classList.contains("is-active");
+  if (sub && !held) {
+    const text = dashCooling ? "WAIT" : sub.getAttribute("data-label") || sub.textContent;
+    if (sub.textContent !== text) sub.textContent = text;
+  }
 }
 
 function handleDevArenaFloorPickerInput() {

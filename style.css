@@ -1941,3 +1941,18 @@ body.touch-enabled #arcControl .arc-segment {
   fill: #5a2a00;
   font-weight: 900;
 }
+
+/* Recharge (cooldown) ring: a dim ring that refills around the button. */
+.abc-cooldown-ring {
+  fill: none;
+  stroke: rgba(234, 246, 255, 0.85);
+  stroke-width: 8px;
+  stroke-linecap: round;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.1s ease-out;
+}
+
+.abc-cooldown-ring.is-visible {
+  opacity: 0.9;
+}
