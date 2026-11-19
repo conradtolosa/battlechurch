@@ -5563,10 +5563,16 @@ const TUTORIAL_ARENA_OBJECTIVES = [
   },
   { type: "dash_plus_kills", move: "Dash", dashTarget: 3, killTarget: 0, label: "Dash 3 times. Wait for B to recharge in between (B)" },
   {
+    type: "card",
+    label: "The Prayer meter",
+    body: "C is Prayer, and it uses your Prayer meter: the bar under Health at the top left. Defeating demons fills it back up. Bigger prayer moves use more: a Unity Strike uses 1 bar, Purify uses 2 and Prayer Storm uses all 6. (In this tutorial it refills on its own.)",
+    highlight: "prayer",
+  },
+  {
     type: "kill_with_move",
     move: "Unity Strike",
     target: 100,
-    label: "C is Prayer. Tap C for a Unity Strike (C)",
+    label: "Tap C for a Unity Strike. It uses 1 Prayer bar (C)",
   },
   // 4. Charging
   {
@@ -5585,10 +5591,10 @@ const TUTORIAL_ARENA_OBJECTIVES = [
     body: "Press one button, then quickly press another, to combo. Combos hit two to three times harder than a single slash. Combos that use B share the Dash cooldown, so wait for B to recharge between them.",
     touchBody: "Slide your thumb quickly from one button to another to combo. Combos hit two to three times harder than a single slash. Combos that use B share the Dash cooldown: wait for the B button to brighten between them.",
   },
-  { type: "kill_with_move", move: "Smash", target: 100, label: "Smash: B then A. Wait for B to recharge between (B -> A)" },
-  { type: "kill_with_move", move: "Cleave", target: 100, label: "Cleave: A then B. Wait for B to recharge between (A -> B)" },
-  { type: "kill_with_move", move: "Reap", target: 100, label: "Reap: C then A (C -> A)" },
-  { type: "kill_with_move", move: "Clash", target: 100, label: "Clash: C then B (C -> B)" },
+  { type: "kill_with_move", move: "Smash", target: 100, label: "Smash: B \u2192 A. Wait for B to recharge (B -> A)", touchLabel: "Smash: slide B \u2192 A. Wait for B to recharge (B -> A)" },
+  { type: "kill_with_move", move: "Cleave", target: 100, label: "Cleave: A \u2192 B. Wait for B to recharge (A -> B)", touchLabel: "Cleave: slide A \u2192 B. Wait for B to recharge (A -> B)" },
+  { type: "kill_with_move", move: "Reap", target: 100, label: "Reap: C \u2192 A (C -> A)", touchLabel: "Reap: slide C \u2192 A (C -> A)" },
+  { type: "kill_with_move", move: "Clash", target: 100, label: "Clash: C \u2192 B (C -> B)", touchLabel: "Clash: slide C \u2192 B (C -> B)" },
   // 6. Why it matters
   {
     type: "card",
@@ -5601,7 +5607,7 @@ const TUTORIAL_ARENA_OBJECTIVES = [
     type: "card",
     label: "Charge two at once",
     body: "Advanced moves charge two buttons together. Hold BOTH buttons down until BOTH charge meters are full, then let go. These are optional: press Continue to practice them, or Skip to start playing.",
-    touchBody: "Advanced moves charge two buttons together. Hold one until it says READY, then slide onto the other (or press it with another finger) and hold until that says READY too. Then let go. These are optional: Continue to practice, or Skip to start playing.",
+    touchBody: "Advanced moves charge two buttons together. Put your thumb where the two buttons meet to hold both (or use two fingers), and hold until both say READY. Then let go. These are optional: Continue to practice, or Skip to start playing.",
   },
   { type: "kill_with_move", move: "Thrash", target: 100, label: "Thrash: charge B and A together (Charge B + A)" },
   { type: "kill_with_move", move: "Hedge", target: 100, label: "Hedge: charge A and C together (Charge A + C)" },
@@ -5611,33 +5617,33 @@ const TUTORIAL_ARENA_OBJECTIVES = [
   {
     type: "card",
     label: "Combo strings",
-    body: "String moves together on the same demons: each hit within a moment of the last builds a Hit Chain, and every 4th hit knocks them down. Start with A: it needs no meter. Then use a move that does, and finish with A while it refills.",
+    body: "Like combos in fighting games such as Street Fighter or Mortal Kombat, you can string moves together. Each hit within a moment of the last builds a Hit Chain, and every 4th hit knocks the enemy down. Start with A: it needs no meter. Then use a move that does, and finish with A while it refills. Practice on the armored dummy: it can't be defeated.",
   },
   {
     type: "combo_string",
     sequence: ["Slash", "Smash", "Slash"],
-    inputs: "A, B then A, A",
+    inputs: "A,  B \u2192 A,  A",
     target: 3,
     label: "Combo string: Slash, Smash, Slash",
   },
   {
     type: "combo_string",
     sequence: ["Slash", "Reap", "Slash"],
-    inputs: "A, C then A, A",
+    inputs: "A,  C \u2192 A,  A",
     target: 3,
     label: "Combo string: Slash, Reap, Slash",
   },
   {
     type: "combo_string",
     sequence: ["Blast", "Slash", "Smash", "Slash"],
-    inputs: "Charge A, A, B then A, A",
+    inputs: "Charge A,  A,  B \u2192 A,  A",
     target: 3,
     label: "Combo string: Blast, Slash, Smash, Slash",
   },
   {
     type: "card",
     label: "Combos to try",
-    body: "Slash, Smash, Slash (A, B>A, A).   Slash, Reap, Slash (A, C>A, A).   Blast, Slash, Smash, Slash (charge A, A, B>A, A).   Bonus: hit a demon right after its attack misses for a Counter Hit. The rest of that chain does extra damage.",
+    body: "Slash, Smash, Slash (A,  B \u2192 A,  A).   Slash, Reap, Slash (A,  C \u2192 A,  A).   Blast, Slash, Smash, Slash (charge A,  A,  B \u2192 A,  A).   Bonus: hit an enemy right after its attack misses for a Counter Hit. The rest of that chain does extra damage.",
   },
   // 9. Done
   {
@@ -5997,6 +6003,7 @@ function updateTutorialArenaHudState() {
           (isTouchControlsActive() && objective.touchBody) || objective.body || "",
         ),
         showButtons: Boolean(objective.showButtons),
+        highlight: objective.highlight || "",
         progressText: "",
         moveKey: "",
       },
@@ -6029,7 +6036,8 @@ function updateTutorialArenaHudState() {
     progressText = `${count}/4`;
     moveKey = "";
   }
-  setTutorialArenaHud({ label, progressText, moveKey }, stepButtons);
+  const shownLabel = (isTouchControlsActive() && objective.touchLabel) || label;
+  setTutorialArenaHud({ label: shownLabel, progressText, moveKey }, stepButtons);
 }
 
 function announceTutorialArenaObjective() {
@@ -6521,6 +6529,35 @@ function maintainTutorialArenaArmoredSpawns() {
   }
 }
 
+// Combo strings: one stationary armored practice dummy that can't be defeated.
+// Refilled every frame, so it can't be defeated (kept short so its health
+// label stays readable).
+const TUTORIAL_ARENA_DUMMY_HEALTH = 9999;
+function maintainTutorialArenaComboDummy() {
+  let dummy = enemies.find((e) => e && e.tutorialComboDummy && !e.dead && e.state !== "death");
+  if (!dummy) {
+    const center = getDevMeleeArenaCenter();
+    // Level with where the pastor starts, clear of the drill text.
+    const spot = { x: center.x + 160, y: center.y - 180 };
+    dummy = spawnEnemyOfType(TUTORIAL_ARENA_ARMORED_TYPE, { x: spot.x, y: spot.y }, {
+      skipSpawnEffects: false,
+      applyCameraShake: false,
+    });
+    if (!dummy) return;
+    dummy.tutorialComboDummy = true;
+    dummy.devImmobileTestDummy = true;
+    dummy.devAnchorX = spot.x;
+    dummy.devAnchorY = spot.y;
+    dummy.spawnOffscreenTimer = 0;
+  }
+  dummy.maxHealth = TUTORIAL_ARENA_DUMMY_HEALTH;
+  dummy.health = TUTORIAL_ARENA_DUMMY_HEALTH;
+  if (dummy.config) {
+    dummy.config.maxHealth = TUTORIAL_ARENA_DUMMY_HEALTH;
+    dummy.config.health = TUTORIAL_ARENA_DUMMY_HEALTH;
+  }
+}
+
 function maintainTutorialArenaWaveSpawns() {
   if (!isTutorialArenaActive() || !tutorialArenaState?.currentObjective) return;
   if (tutorialArenaState.pendingStart) return;
@@ -6529,6 +6566,10 @@ function maintainTutorialArenaWaveSpawns() {
   if (tutorialArenaState.completionQueuedAt > 0) return;
   if (objectiveType === "kill_armored") {
     maintainTutorialArenaArmoredSpawns();
+    return;
+  }
+  if (objectiveType === "combo_string") {
+    maintainTutorialArenaComboDummy();
     return;
   }
   if (!tutorialArenaState.batchSpawned) {
@@ -6543,6 +6584,12 @@ function maintainTutorialArenaWaveSpawns() {
 
 function enforceTutorialArenaVitals() {
   if (!isTutorialArenaActive() || !player) return;
+  // Congregation members can't be worn down while you're learning.
+  if (Array.isArray(npcs)) {
+    npcs.forEach((npc) => {
+      if (npc && Number.isFinite(npc.maxFaith) && npc.faith < npc.maxFaith) npc.faith = npc.maxFaith;
+    });
+  }
   player.invulnerableTimer = Math.max(player.invulnerableTimer || 0, 0.2);
   const prayerRequired = Math.max(1, Number(player.prayerChargeRequired) || Number(PRAYER_BOMB_CHARGE_REQUIRED) || 1);
   const now = typeof performance !== "undefined" && typeof performance.now === "function"

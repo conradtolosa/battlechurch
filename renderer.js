@@ -15550,6 +15550,28 @@ function drawChurchUpgradeScreen(ctx, canvas, options = {}) {
       y += bodyLineH;
     });
 
+    if (hud.highlight === "prayer" && typeof window !== "undefined" && window.__hudPrayerMeterBounds) {
+      // Point at the Prayer meter: pulsing outline + a line from the card.
+      const b = window.__hudPrayerMeterBounds;
+      const pulse = 0.55 + 0.45 * Math.sin((typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.008);
+      ctx.save();
+      ctx.strokeStyle = `rgba(255, 210, 90, ${0.55 + 0.45 * pulse})`;
+      ctx.lineWidth = 5;
+      ctx.shadowColor = "rgba(255, 200, 80, 0.9)";
+      ctx.shadowBlur = 14 * pulse;
+      ctx.beginPath();
+      ctx.roundRect(b.x - 8, b.y - 8, b.w + 16, b.h + 16, 10);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 3;
+      ctx.setLineDash([10, 8]);
+      ctx.beginPath();
+      ctx.moveTo(b.x + b.w / 2, b.y + b.h + 10);
+      ctx.lineTo(panelX + 60, panelY);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     if (hud.showButtons) {
       // A / B / C diagram: what each button does.
       const entries = [

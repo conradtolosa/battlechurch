@@ -573,6 +573,10 @@
       const meterY = panelY + 46;
       const meterWidth = Math.min(210, Math.max(120, columnWidth - 12));
       const meterHeight = 18;
+      // Where the Prayer meter is, so the tutorial can point at it.
+      if (typeof window !== "undefined") {
+        window.__hudPrayerMeterBounds = { x: meterX, y: meterY, w: meterWidth, h: meterHeight };
+      }
       const meterRadius = 6;
       ctx.save();
       ctx.globalAlpha = 0.95;

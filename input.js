@@ -729,6 +729,10 @@
   // Every finger is tracked separately, so two-thumb play works too.
   const ABC_CHARGE_FALLBACK_MS = { A: 1500, B: 1500, C: 1000 };
   const ABC_HIT_RADIUS_SCALE = 1.3;
+  // "Press both" zone where two buttons meet: the touch is in the outer part
+  // of the nearest button and close to the edge of the next one.
+  const ABC_SEAM_MIN_SCORE = 0.78;
+  const ABC_SEAM_MAX_SCORE = 1.12;
   // On a slide, how long both buttons are held together before the first
   // one is released.
   const ABC_SLIDE_OVERLAP_MS = 30;
@@ -948,6 +952,24 @@
       refresh();
     };
 
+    // A thumb resting where two buttons meet presses BOTH (one thumb can't
+    // land on two buttons at once otherwise). Returns the pair, or null.
+    const getSeamPairAt = (clientX, clientY) => {
+      const scores = circleEls.map((el) => {
+        const rect = el.getBoundingClientRect();
+        const radius = rect.width / 2 || 1;
+        const cx = rect.left + radius;
+        const cy = rect.top + rect.height / 2;
+        return { seg: el.dataset.seg, score: Math.hypot(clientX - cx, clientY - cy) / radius };
+      }).sort((a, b) => a.score - b.score);
+      const [best, second] = scores;
+      if (!best || !second) return null;
+      if (best.score >= ABC_SEAM_MIN_SCORE && second.score <= ABC_SEAM_MAX_SCORE) {
+        return [best.seg, second.seg];
+      }
+      return null;
+    };
+
     const start = (event) => {
       if (!virtualInput.enabled) return;
       const seg = getSegmentAt(event.clientX, event.clientY);
@@ -955,6 +977,17 @@
       try {
         arcEl.setPointerCapture(event.pointerId);
       } catch (e) {}
+      const seam = getSeamPairAt(event.clientX, event.clientY);
+      if (seam) {
+        // Both buttons go down together and stay held (charge both).
+        const both = { seg: seam[0], held: new Set(), pressedAt: {}, pending: null, ended: false, both: true };
+        pointers.set(event.pointerId, both);
+        seam.forEach((s) => pressHeld(both, s));
+        refresh();
+        ensureTicking();
+        event.preventDefault();
+        return;
+      }
       // Don't tell the game yet: wait briefly to see if this is a tap, a
       // hold or the start of a slide combo.
       const state = { seg, held: new Set(), pressedAt: {}, pending: seg, ended: false };
@@ -969,6 +1002,7 @@
       const state = pointers.get(event.pointerId);
       if (!state) return;
       event.preventDefault();
+      if (state.both) return; // two-button press: stay on both until lifted
       const seg = getSegmentAt(event.clientX, event.clientY);
       // Off the buttons: keep holding whatever we're on (sticky).
       if (!seg || seg === state.seg) return;
