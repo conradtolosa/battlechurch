@@ -5543,7 +5543,7 @@ const TUTORIAL_ARENA_OBJECTIVES = [
     label: "Welcome to Battlechurch",
     body: "Demons are attacking your town. Your pastor leads the fight, and your congregation fights beside you. First, the basics.",
   },
-  { type: "move_wasd", label: "Move with WASD or Xbox Controller" },
+  { type: "move_wasd", label: "Move with WASD or Xbox Controller", touchLabel: "Move with the stick on the left: up, down, left and right" },
   { type: "kill_any", target: 100, label: "Your pastor fires automatically. Defeat 100 demons" },
   // 2. The point of the game
   {

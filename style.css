@@ -2005,3 +2005,75 @@ body.touch-enabled #arcControl .arc-junction {
 body.touch-enabled #arcControl .abc-diag {
   pointer-events: auto;
 }
+
+/* Movement stick (reimagined): a circular 8-way pad that rests at a home
+   spot mirroring the action pad and floats under the thumb when touched
+   (see configureVirtualJoystick in input.js). */
+body.touch-enabled {
+  --stick-size: calc(var(--arc-size) * 0.86);
+}
+
+body.touch-enabled .joystick-area.left::before {
+  display: none;
+}
+
+body.touch-enabled .joystick-base.is-floating {
+  width: var(--stick-size);
+  height: var(--stick-size);
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  opacity: 0.6;
+  transition: opacity 0.12s ease-out, left 0.2s ease-out, top 0.2s ease-out;
+  pointer-events: none;
+}
+
+body.touch-enabled .joystick-base.is-floating.is-active {
+  opacity: 1;
+  /* Follow the thumb instantly while touched. */
+  transition: opacity 0.06s ease-out;
+}
+
+.joystick-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.stick-bg {
+  fill: rgba(10, 15, 31, 0.55);
+  stroke: rgba(234, 246, 255, 0.6);
+  stroke-width: 3px;
+}
+
+.stick-inner {
+  fill: none;
+  stroke: rgba(234, 246, 255, 0.18);
+  stroke-width: 2px;
+}
+
+.stick-arrow {
+  fill: rgba(234, 246, 255, 0.45);
+  transition: fill 0.08s ease-out;
+}
+
+.stick-arrow.is-on {
+  fill: #FFE7A8;
+  filter: drop-shadow(0 0 6px rgba(255, 210, 90, 0.9));
+}
+
+body.touch-enabled .joystick-base.is-floating .joystick-handle {
+  width: 40%;
+  height: 40%;
+  background: radial-gradient(circle at 35% 30%, #F4F8FF, #9FB4D8 70%);
+  border: 3px solid rgba(10, 15, 31, 0.8);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+}
+
+/* Wide phones: give the thumb a bigger zone than the thin side gutter. */
+body.layout-slab.touch-enabled .joystick-area.left {
+  width: max(var(--gutter-width, 0px), 38vw);
+}

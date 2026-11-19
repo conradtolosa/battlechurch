@@ -327,6 +327,20 @@
     state.active = false;
   }
 
+  // Movement stick feel (see configureVirtualJoystick).
+  const STICK_DEAD_ZONE = 0.22; // fraction of the radius before you move
+  const STICK_FOLLOW_SCALE = 1.15; // thumb past this x radius drags the stick
+
+  function setStickDirection(baseEl, dirIndex) {
+    if (!baseEl) return;
+    const value = dirIndex === null || dirIndex === undefined ? "" : String(dirIndex);
+    if (baseEl.dataset.dir === value) return;
+    baseEl.dataset.dir = value;
+    baseEl.querySelectorAll(".stick-arrow").forEach((el) => {
+      el.classList.toggle("is-on", value !== "" && el.dataset.dir === value);
+    });
+  }
+
   function updateVirtualJoystick(baseEl, handle, state, event) {
     const rect = baseEl.getBoundingClientRect();
     const radius = rect.width / 2;
@@ -347,14 +361,18 @@
     const normalizedX = radius > 0 ? offsetX / radius : 0;
     const normalizedY = radius > 0 ? offsetY / radius : 0;
     const magnitude = Math.min(1, Math.hypot(normalizedX, normalizedY));
-    const deadZone = state === virtualInput.movement ? Math.min(virtualInput.deadZone, 0.06) : virtualInput.deadZone;
+    const deadZone = state === virtualInput.movement ? STICK_DEAD_ZONE : virtualInput.deadZone;
     if (magnitude > deadZone) {
       const normalized = normalizeVector(normalizedX, normalizedY);
       if (state === virtualInput.movement) {
+        // The pastor moves in 8 directions at full speed, so the stick acts
+        // like a circular D-pad: snap to the nearest of 8 directions.
         const angle = Math.atan2(normalized.y, normalized.x);
-        const snapped = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
-        state.x = Math.cos(snapped) * magnitude;
-        state.y = Math.sin(snapped) * magnitude;
+        const dirIndex = ((Math.round(angle / (Math.PI / 4)) % 8) + 8) % 8;
+        const snapped = dirIndex * (Math.PI / 4);
+        state.x = Math.cos(snapped);
+        state.y = Math.sin(snapped);
+        setStickDirection(baseEl, dirIndex);
       } else {
         state.x = normalized.x * magnitude;
         state.y = normalized.y * magnitude;
@@ -371,6 +389,7 @@
         }
       }
     } else {
+      if (state === virtualInput.movement) setStickDirection(baseEl, null);
       state.x = 0;
       state.y = 0;
       state.active = false;
@@ -396,15 +415,76 @@
       resetVirtualJoystick(handle, state);
       if (controlKey === "movement") {
         baseEl.classList.remove("is-active");
+        setStickDirection(baseEl, null);
+        placeHome(); // glides back (CSS transition)
       }
     };
 
+    // Movement stick (modern mobile style):
+    // - rests at a "home" spot mirroring the action pad, so it's always visible;
+    // - touch anywhere in the left zone and it jumps under your thumb (if you
+    //   touch inside it, it stays put);
+    // - drag past the edge and it follows your thumb;
+    // - let go and it glides back home.
+    const placeBase = (x, y) => {
+      baseEl.style.left = `${x}px`;
+      baseEl.style.top = `${y}px`;
+      baseEl.__center = { x, y };
+    };
+    const placeHome = () => {
+      if (controlKey !== "movement" || !anchorEl || state.pointerId !== null) return;
+      const zone = anchorEl.getBoundingClientRect();
+      const pad = arcControl ? arcControl.getBoundingClientRect() : null;
+      const size = baseEl.getBoundingClientRect().width || 120;
+      let x;
+      let y;
+      if (pad && pad.width > 0) {
+        // Same height as the action pad, same distance from the screen edge.
+        const viewportW = window.innerWidth || zone.right;
+        const sideGap = Math.max(12, viewportW - pad.right);
+        x = Math.max(size / 2 + 8, sideGap + size / 2 - zone.left);
+        y = pad.top + pad.height / 2 - zone.top;
+      } else {
+        x = size / 2 + 24;
+        y = zone.height - size / 2 - 24;
+      }
+      y = Math.max(size / 2 + 4, Math.min(zone.height - size / 2 - 4, y));
+      placeBase(x, y);
+    };
+    if (controlKey === "movement") {
+      baseEl.__placeHome = placeHome;
+      baseEl.classList.add("is-floating");
+      if (typeof requestAnimationFrame === "function") {
+        requestAnimationFrame(() => requestAnimationFrame(placeHome));
+      }
+      window.addEventListener("resize", () => setTimeout(placeHome, 60));
+    }
+
     const setBasePosition = (event) => {
       if (controlKey !== "movement" || !anchorEl) return;
-      const rect = anchorEl.getBoundingClientRect();
-      baseEl.style.left = `${event.clientX - rect.left}px`;
-      baseEl.style.top = `${event.clientY - rect.top}px`;
+      const zone = anchorEl.getBoundingClientRect();
+      const x = event.clientX - zone.left;
+      const y = event.clientY - zone.top;
+      const radius = (baseEl.getBoundingClientRect().width || 120) / 2;
+      const c = baseEl.__center;
+      // Touching inside the stick keeps it where it is; elsewhere it jumps.
+      if (!c || Math.hypot(x - c.x, y - c.y) > radius) placeBase(x, y);
       baseEl.classList.add("is-active");
+    };
+
+    // Thumb dragged past the edge: pull the stick along behind it.
+    const followThumb = (event) => {
+      if (controlKey !== "movement" || !anchorEl || !baseEl.__center) return;
+      const zone = anchorEl.getBoundingClientRect();
+      const x = event.clientX - zone.left;
+      const y = event.clientY - zone.top;
+      const radius = (baseEl.getBoundingClientRect().width || 120) / 2;
+      const c = baseEl.__center;
+      const dist = Math.hypot(x - c.x, y - c.y);
+      if (dist > radius * STICK_FOLLOW_SCALE) {
+        const k = (dist - radius) / dist;
+        placeBase(c.x + (x - c.x) * k, c.y + (y - c.y) * k);
+      }
     };
 
     // A quick tap with no drag in the joystick zone is meant for whatever
@@ -426,6 +506,7 @@
 
     const move = (event) => {
       if (state.pointerId !== event.pointerId) return;
+      followThumb(event);
       updateVirtualJoystick(baseEl, handle, state, event);
       event.preventDefault();
     };

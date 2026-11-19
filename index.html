@@ -40,6 +40,20 @@
       <div class="touch-row">
         <div class="joystick-area left">
           <div class="joystick-base" id="moveStick">
+            <!-- Movement stick: a circular 8-way pad (the game moves in 8
+                 directions); the active direction lights up. -->
+            <svg class="joystick-ring" viewBox="0 0 200 200" aria-hidden="true">
+              <circle class="stick-bg" cx="100" cy="100" r="96" />
+              <circle class="stick-inner" cx="100" cy="100" r="60" />
+              <polygon class="stick-arrow stick-arrow-big" data-dir="0" points="192.0,100.0 174.0,113.0 174.0,87.0" />
+              <polygon class="stick-arrow" data-dir="1" points="162.2,162.2 150.2,160.1 160.1,150.2" />
+              <polygon class="stick-arrow stick-arrow-big" data-dir="2" points="100.0,192.0 87.0,174.0 113.0,174.0" />
+              <polygon class="stick-arrow" data-dir="3" points="37.8,162.2 39.9,150.2 49.8,160.1" />
+              <polygon class="stick-arrow stick-arrow-big" data-dir="4" points="8.0,100.0 26.0,87.0 26.0,113.0" />
+              <polygon class="stick-arrow" data-dir="5" points="37.8,37.8 49.8,39.9 39.9,49.8" />
+              <polygon class="stick-arrow stick-arrow-big" data-dir="6" points="100.0,8.0 113.0,26.0 87.0,26.0" />
+              <polygon class="stick-arrow" data-dir="7" points="162.2,37.8 160.1,49.8 150.2,39.9" />
+            </svg>
             <div class="joystick-handle"></div>
           </div>
         </div>
