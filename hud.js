@@ -2352,6 +2352,25 @@
       }
 
       ctx.restore();
+
+      // Moves just performed, in order (e.g. "Slash > Smash > Reap"), so the
+      // player can see exactly what their inputs came out as.
+      const trail = window.__moveTrail;
+      if (trail && Array.isArray(trail.moves) && trail.moves.length > 1 && now - trail.lastAt < duration + fadeOutMs) {
+        const trailText = trail.moves.join("  >  ");
+        ctx.globalAlpha = alpha;
+        ctx.font = hudFont(22, "800");
+        const trailW = ctx.measureText(trailText).width + PAD_X * 2;
+        const trailH = 34;
+        const trailX = panelRight - trailW;
+        const trailY = panelY + panelH + 6;
+        ctx.fillStyle = "rgba(28, 10, 5, 0.85)";
+        roundRect(ctx, trailX, trailY, trailW, trailH, 6, true, false);
+        ctx.fillStyle = "#F4E2B0";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(trailText, trailX + PAD_X, trailY + trailH / 2 + 1);
+      }
       ctx.restore();
     };
 

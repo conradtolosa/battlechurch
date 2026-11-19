@@ -5607,7 +5607,7 @@ const TUTORIAL_ARENA_OBJECTIVES = [
     type: "card",
     label: "Charge two at once",
     body: "Advanced moves charge two buttons together. Hold BOTH buttons down until BOTH charge meters are full, then let go. These are optional: press Continue to practice them, or Skip to start playing.",
-    touchBody: "Advanced moves charge two buttons together. Put your thumb where the two buttons meet to hold both (or use two fingers), and hold until both say READY. Then let go. The dot in the middle holds all three. These are optional: Continue to practice, or Skip to start playing.",
+    touchBody: "Advanced moves charge two buttons together. Put your thumb on the light stripe between two buttons to hold both (or use two fingers), and hold until both say READY. Then let go. The dot in the middle holds all three. These are optional: Continue to practice, or Skip to start playing.",
   },
   { type: "kill_with_move", move: "Thrash", target: 100, label: "Thrash: charge B and A together (Charge B + A)" },
   { type: "kill_with_move", move: "Hedge", target: 100, label: "Hedge: charge A and C together (Charge A + C)" },
@@ -28812,6 +28812,17 @@ function recordTutorialArenaComboMove(moveName) {
   const seq = Array.isArray(objective.sequence) ? objective.sequence : [];
   if (!seq.length) return;
   const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+  // Pressing B right after an A attack already cancels into Smash, so the A
+  // of a "B then A" slide lands as an extra Slash just after it. Ignore that
+  // echo instead of breaking the string.
+  if (
+    moveName === "Slash" &&
+    tutorialArenaState.comboLastMove === "Smash" &&
+    now - (Number(tutorialArenaState.comboLastAt) || 0) < 450
+  ) {
+    return;
+  }
+  tutorialArenaState.comboLastMove = moveName;
   let step = Number(tutorialArenaState.comboStep) || 0;
   if (step > 0 && now - (Number(tutorialArenaState.comboLastAt) || 0) > TUTORIAL_ARENA_COMBO_STRING_GAP_MS) {
     step = 0;
@@ -28834,8 +28845,22 @@ function recordTutorialArenaComboMove(moveName) {
   checkTutorialArenaObjectiveComplete();
 }
 
+// Recent moves in order, shown under the move box (e.g. Slash > Smash > Reap).
+const MOVE_TRAIL_RESET_MS = 1600;
+function recordMoveTrail(moveName) {
+  if (typeof window === "undefined" || !moveName) return;
+  const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+  const trail = window.__moveTrail || { moves: [], lastAt: 0 };
+  if (now - trail.lastAt > MOVE_TRAIL_RESET_MS) trail.moves = [];
+  trail.moves.push(String(moveName));
+  while (trail.moves.length > 5) trail.moves.shift();
+  trail.lastAt = now;
+  window.__moveTrail = trail;
+}
+
 function showMoveBanner(moveName) {
   recordTutorialArenaComboMove(moveName);
+  recordMoveTrail(moveName);
   const tokens = MOVE_BANNER_TOKENS[moveName];
   if (!tokens) return;
   const now = typeof performance !== "undefined" ? performance.now() : Date.now();

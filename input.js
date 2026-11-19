@@ -729,12 +729,21 @@
   // Every finger is tracked separately, so two-thumb play works too.
   const ABC_CHARGE_FALLBACK_MS = { A: 1500, B: 1500, C: 1000 };
   const ABC_HIT_RADIUS_SCALE = 1.3;
-  // "Press both" zone where two buttons meet: the touch is in the outer part
-  // of the nearest button and close to the edge of the next one.
-  const ABC_SEAM_MIN_SCORE = 0.78;
-  const ABC_SEAM_MAX_SCORE = 1.12;
-  // Middle of the triangle, close to all three buttons: hold A + B + C.
-  const ABC_TRIPLE_MAX_SCORE = 1.15;
+  // Three-wedge pad geometry (must match the SVG in index.html). Angles are
+  // degrees, 0 = right, 90 = down.
+  const ABC_PAD_CX = 130;
+  const ABC_PAD_CY = 130;
+  const ABC_PAD_R = 122;
+  const ABC_PAD_WEDGES = { C: [-150, -30], A: [-30, 90], B: [90, 210] };
+  const ABC_PAD_EDGES = [
+    { deg: -30, segs: ["C", "A"] },
+    { deg: 90, segs: ["A", "B"] },
+    { deg: 210, segs: ["B", "C"] },
+  ];
+  // Thumb within this distance of an edge = press both; within this radius
+  // of the center = press all three.
+  const ABC_PAD_SEAM_HALF = 15;
+  const ABC_PAD_CENTER_R = 24;
   // On a slide, how long both buttons are held together before the first
   // one is released.
   const ABC_SLIDE_OVERLAP_MS = 30;
@@ -756,33 +765,34 @@
     const SVG_NS = "http://www.w3.org/2000/svg";
     const rings = {};
     const subLabels = {};
+    const rimArcPath = (seg, radius) => {
+      const [a0, a1] = ABC_PAD_WEDGES[seg];
+      const pad = 5; // degrees of breathing room at each end
+      const p = (deg) => {
+        const t = (deg * Math.PI) / 180;
+        return `${(ABC_PAD_CX + radius * Math.cos(t)).toFixed(2)} ${(ABC_PAD_CY + radius * Math.sin(t)).toFixed(2)}`;
+      };
+      return `M ${p(a0 + pad)} A ${radius} ${radius} 0 0 1 ${p(a1 - pad)}`;
+    };
+    const makeRimArc = (seg, className) => {
+      const arc = document.createElementNS(SVG_NS, "path");
+      arc.setAttribute("d", rimArcPath(seg, ABC_PAD_R + 9));
+      arc.setAttribute("pathLength", "100");
+      arc.setAttribute("class", className);
+      arc.setAttribute("data-seg", seg);
+      arc.style.strokeDasharray = "100";
+      arc.style.strokeDashoffset = "100";
+      arc.__circumference = 100;
+      return arc;
+    };
     circleEls.forEach((el) => {
       const seg = el.dataset.seg;
-      const r = Number(el.getAttribute("r")) || 50;
-      const ring = document.createElementNS(SVG_NS, "circle");
-      ring.setAttribute("cx", el.getAttribute("cx"));
-      ring.setAttribute("cy", el.getAttribute("cy"));
-      ring.setAttribute("r", String(r + 7));
-      ring.setAttribute("class", "abc-charge-ring");
-      ring.setAttribute("data-seg", seg);
-      ring.setAttribute("transform", `rotate(-90 ${el.getAttribute("cx")} ${el.getAttribute("cy")})`);
-      const circumference = 2 * Math.PI * (r + 7);
-      ring.style.strokeDasharray = String(circumference);
-      ring.style.strokeDashoffset = String(circumference);
-      ring.__circumference = circumference;
+      // Charge meter: fills along the wedge's outer edge while held.
+      const ring = makeRimArc(seg, "abc-charge-ring");
       el.parentNode.insertBefore(ring, el);
       rings[seg] = ring;
-      // Recharge ring (cooldowns, e.g. B after a Dash); driven by game.js.
-      const cooldownRing = document.createElementNS(SVG_NS, "circle");
-      cooldownRing.setAttribute("cx", el.getAttribute("cx"));
-      cooldownRing.setAttribute("cy", el.getAttribute("cy"));
-      cooldownRing.setAttribute("r", String(r + 7));
-      cooldownRing.setAttribute("class", "abc-cooldown-ring");
-      cooldownRing.setAttribute("data-seg", seg);
-      cooldownRing.setAttribute("transform", `rotate(-90 ${el.getAttribute("cx")} ${el.getAttribute("cy")})`);
-      cooldownRing.style.strokeDasharray = String(circumference);
-      cooldownRing.style.strokeDashoffset = String(circumference);
-      cooldownRing.__circumference = circumference;
+      // Recharge meter (cooldowns, e.g. B after a Dash); driven by game.js.
+      const cooldownRing = makeRimArc(seg, "abc-cooldown-ring");
       el.parentNode.insertBefore(cooldownRing, ring);
       const sub = arcEl.querySelector(`.abc-sub[data-seg="${seg}"]`);
       if (sub) {
@@ -887,24 +897,42 @@
       if (holdCounts[seg] === 0) releaseVirtualKey(cfg.key, cfg);
     };
 
-    // Nearest button whose (slightly enlarged) circle contains the point, so
-    // the small gaps between buttons never drop a slide.
-    const getSegmentAt = (clientX, clientY) => {
+    // Where on the pad a screen point is, in pad (SVG) units.
+    const toPad = (clientX, clientY) => {
+      const ctm = arcEl.getScreenCTM && arcEl.getScreenCTM();
+      if (!ctm) return null;
+      const pt = new DOMPoint(clientX, clientY).matrixTransform(ctm.inverse());
+      const dx = pt.x - ABC_PAD_CX;
+      const dy = pt.y - ABC_PAD_CY;
+      let deg = (Math.atan2(dy, dx) * 180) / Math.PI; // -180..180, 0 = right, 90 = down
+      if (deg < -150) deg += 360; // keep B's wedge (90..210) continuous
+      return { r: Math.hypot(dx, dy), deg };
+    };
+    const wedgeForAngle = (deg) => {
+      if (deg >= -150 && deg < -30) return "C";
+      if (deg >= -30 && deg < 90) return "A";
+      return "B";
+    };
+    // Perpendicular distance from the point to each wedge edge (a ray from
+    // the center); returns the nearest edge and that distance.
+    const nearestEdge = (pad) => {
       let best = null;
-      let bestScore = Infinity;
-      circleEls.forEach((el) => {
-        const rect = el.getBoundingClientRect();
-        const radius = rect.width / 2;
-        if (!radius) return;
-        const cx = rect.left + radius;
-        const cy = rect.top + rect.height / 2;
-        const score = Math.hypot(clientX - cx, clientY - cy) / radius;
-        if (score < bestScore) {
-          bestScore = score;
-          best = el.dataset.seg;
-        }
+      ABC_PAD_EDGES.forEach((edge) => {
+        let diff = Math.abs(pad.deg - edge.deg) % 360;
+        if (diff > 180) diff = 360 - diff;
+        if (diff >= 90) return;
+        const dist = pad.r * Math.sin((diff * Math.PI) / 180);
+        if (!best || dist < best.dist) best = { edge, dist };
       });
-      return bestScore <= ABC_HIT_RADIUS_SCALE ? best : null;
+      return best;
+    };
+
+    // The single button under a point (null off the pad). Used for slides,
+    // so points on an edge stripe count as "not decided yet" (sticky).
+    const getSegmentAt = (clientX, clientY) => {
+      const pad = toPad(clientX, clientY);
+      if (!pad || pad.r > ABC_PAD_R * ABC_HIT_RADIUS_SCALE) return null;
+      return wedgeForAngle(pad.deg);
     };
 
     const pressHeld = (state, seg) => {
@@ -956,26 +984,37 @@
       refresh();
     };
 
-    // A thumb resting where two buttons meet presses BOTH (one thumb can't
-    // land on two buttons at once otherwise). Returns the pair, or null.
-    // Returns the pair (or all three, at the middle) the thumb is resting on.
+    // A thumb on the stripe between two buttons presses BOTH; in the middle,
+    // all three. Returns the buttons, or null for a single button.
     const getSeamPairAt = (clientX, clientY) => {
-      const scores = circleEls.map((el) => {
-        const rect = el.getBoundingClientRect();
-        const radius = rect.width / 2 || 1;
-        const cx = rect.left + radius;
-        const cy = rect.top + rect.height / 2;
-        return { seg: el.dataset.seg, score: Math.hypot(clientX - cx, clientY - cy) / radius };
-      }).sort((a, b) => a.score - b.score);
-      const [best, second, third] = scores;
-      if (!best || !second) return null;
-      if (third && third.score <= ABC_TRIPLE_MAX_SCORE) {
-        return [best.seg, second.seg, third.seg];
-      }
-      if (best.score >= ABC_SEAM_MIN_SCORE && second.score <= ABC_SEAM_MAX_SCORE) {
-        return [best.seg, second.seg];
-      }
+      const pad = toPad(clientX, clientY);
+      if (!pad || pad.r > ABC_PAD_R * ABC_HIT_RADIUS_SCALE) return null;
+      if (pad.r <= ABC_PAD_CENTER_R) return ["A", "B", "C"];
+      const near = nearestEdge(pad);
+      if (near && near.dist <= ABC_PAD_SEAM_HALF) return near.edge.segs.slice();
       return null;
+    };
+
+    // For tests/debugging: a screen point for "A", "A+B", "ABC", etc.
+    arcEl.__abcPoint = (name) => {
+      const ctm = arcEl.getScreenCTM && arcEl.getScreenCTM();
+      if (!ctm) return null;
+      let deg = 0;
+      let r = ABC_PAD_R * 0.6;
+      if (name === "ABC") {
+        r = 0;
+      } else if (name.includes("+")) {
+        const key = name.split("+").sort().join("+");
+        const edge = ABC_PAD_EDGES.find((e) => e.segs.slice().sort().join("+") === key);
+        deg = edge ? edge.deg : 0;
+        r = ABC_PAD_R * 0.55;
+      } else {
+        const [a0, a1] = ABC_PAD_WEDGES[name];
+        deg = (a0 + a1) / 2;
+      }
+      const t = (deg * Math.PI) / 180;
+      const pt = new DOMPoint(ABC_PAD_CX + r * Math.cos(t), ABC_PAD_CY + r * Math.sin(t)).matrixTransform(ctm);
+      return { x: pt.x, y: pt.y };
     };
 
     const start = (event) => {

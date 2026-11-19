@@ -45,26 +45,30 @@
         </div>
         <div class="center-controls"></div>
         <div class="button-area right">
-          <svg id="arcControl" viewBox="0 0 260 250" role="group" aria-label="Action Buttons">
-            <!-- A, B and C in a triangle so every pair touches: slide from one
-                 button to another for combos (e.g. C then A = Reap). -->
+          <svg id="arcControl" viewBox="0 0 260 260" role="group" aria-label="Action Buttons">
+            <!-- One round pad split into three wedges: every pair of buttons shares
+                 a long edge (thumb on the stripe = press both) and all three meet
+                 in the middle (center dot = press all three). Geometry must match
+                 ABC_PAD_* in input.js. -->
             <g class="abc-btn" data-seg="C">
-              <circle class="arc-segment arc-c" data-seg="C" cx="130" cy="80" r="60" />
-              <text class="arc-label" data-seg="C" x="130" y="72">C</text>
-              <text class="abc-sub" data-seg="C" x="130" y="104">PRAY</text>
-            </g>
-            <g class="abc-btn" data-seg="B">
-              <circle class="arc-segment arc-b" data-seg="B" cx="74" cy="176" r="60" />
-              <text class="arc-label" data-seg="B" x="68" y="172">B</text>
-              <text class="abc-sub" data-seg="B" x="68" y="204">DASH</text>
+              <path class="arc-segment arc-c" data-seg="C" d="M 130 130 L 24.34 69.0 A 122 122 0 0 1 235.66 69.0 Z" />
+              <text class="arc-label" data-seg="C" x="130.0" y="51.24">C</text>
+              <text class="abc-sub" data-seg="C" x="130.0" y="83.24">PRAY</text>
             </g>
             <g class="abc-btn" data-seg="A">
-              <circle class="arc-segment arc-a" data-seg="A" cx="186" cy="176" r="60" />
-              <text class="arc-label" data-seg="A" x="192" y="172">A</text>
-              <text class="abc-sub" data-seg="A" x="192" y="204">SWORD</text>
+              <path class="arc-segment arc-a" data-seg="A" d="M 130 130 L 235.66 69.0 A 122 122 0 0 1 130.0 252.0 Z" />
+              <text class="arc-label" data-seg="A" x="191.28" y="157.38">A</text>
+              <text class="abc-sub" data-seg="A" x="191.28" y="189.38">SWORD</text>
             </g>
-            <!-- Where all three meet: hold A + B + C together (Prayer Storm). -->
-            <circle class="arc-junction" data-seg="ABC" cx="130" cy="143" r="15" />
+            <g class="abc-btn" data-seg="B">
+              <path class="arc-segment arc-b" data-seg="B" d="M 130 130 L 130.0 252.0 A 122 122 0 0 1 24.34 69.0 Z" />
+              <text class="arc-label" data-seg="B" x="68.72" y="157.38">B</text>
+              <text class="abc-sub" data-seg="B" x="68.72" y="189.38">DASH</text>
+            </g>
+            <line class="abc-seam" x1="130" y1="130" x2="235.66" y2="69.0" />
+            <line class="abc-seam" x1="130" y1="130" x2="130.0" y2="252.0" />
+            <line class="abc-seam" x1="130" y1="130" x2="24.34" y2="69.0" />
+            <circle class="arc-junction" data-seg="ABC" cx="130" cy="130" r="22" />
           </svg>
         </div>
       </div>

@@ -1968,3 +1968,16 @@ body.touch-enabled #arcControl .arc-segment {
 body.touch-enabled #arcControl .arc-junction {
   pointer-events: auto;
 }
+
+/* Three-wedge pad: light stripes mark the "press both" zones along each
+   edge (width = 2 x ABC_PAD_SEAM_HALF in input.js). */
+.abc-seam {
+  stroke: rgba(255, 248, 225, 0.32);
+  stroke-width: 30px;
+  stroke-linecap: butt;
+  pointer-events: none;
+}
+
+#arcControl .arc-segment {
+  stroke-width: 2px;
+}
