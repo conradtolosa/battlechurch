@@ -956,8 +956,35 @@
     };
   }
 
+  // Stop Android/Chrome long-press behavior (text selection, "Search Google",
+  // context menu) on the touch controls. When the browser takes over a held
+  // touch it cancels it, which would release the button mid-hold.
+  function blockLongPressBehavior(root) {
+    if (!root || root.__longPressBlocked) return;
+    root.__longPressBlocked = true;
+    const isGameControl = (target) =>
+      Boolean(target && target.closest && target.closest("#arcControl, .joystick-area"));
+    root.addEventListener("contextmenu", (event) => event.preventDefault());
+    root.addEventListener("selectstart", (event) => event.preventDefault());
+    root.addEventListener(
+      "touchstart",
+      (event) => {
+        if (isGameControl(event.target)) event.preventDefault();
+      },
+      { passive: false },
+    );
+    root.addEventListener(
+      "touchmove",
+      (event) => {
+        if (isGameControl(event.target)) event.preventDefault();
+      },
+      { passive: false },
+    );
+  }
+
   function ensureVirtualControlsConfigured() {
     if (virtualInput.configured) return;
+    blockLongPressBehavior(touchControlsRoot);
     if (moveStickBase) {
       configureVirtualJoystick(moveStickBase, "movement");
     }

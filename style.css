@@ -1873,3 +1873,20 @@ body.layout-rotate-warning .save-dialog__actions .save-dialog__btn-primary {
 .dev-playtest-quick-actions__button:active {
   transform: translateY(1px);
 }
+
+/* Touch controls: a held finger must never become a browser long-press
+   (text selection, "Search Google", context menu). Those steal the touch,
+   which releases the button and fires the move early. */
+#touchControls,
+#touchControls * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#arcControl,
+#arcControl *,
+body.touch-enabled .joystick-area.left {
+  touch-action: none;
+}
