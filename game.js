@@ -5593,8 +5593,8 @@ const TUTORIAL_ARENA_OBJECTIVES = [
   },
   { type: "kill_with_move", move: "Smash", target: 100, label: "Smash: B \u2192 A. Wait for B to recharge (B -> A)", touchLabel: "Smash: slide B \u2192 A. Wait for B to recharge (B -> A)" },
   { type: "kill_with_move", move: "Cleave", target: 100, label: "Cleave: A \u2192 B. Wait for B to recharge (A -> B)", touchLabel: "Cleave: slide A \u2192 B. Wait for B to recharge (A -> B)" },
-  { type: "kill_with_move", move: "Reap", target: 100, label: "Reap: C \u2192 A (C -> A)", touchLabel: "Reap: slide C \u2192 A (C -> A)" },
-  { type: "kill_with_move", move: "Clash", target: 100, label: "Clash: C \u2192 B (C -> B)", touchLabel: "Clash: slide C \u2192 B (C -> B)" },
+  { type: "kill_with_move", move: "Reap", target: 100, label: "Reap: C \u2192 A (C -> A)", touchLabel: "Reap: slide between C and A, either way (C -> A)" },
+  { type: "kill_with_move", move: "Clash", target: 100, label: "Clash: C \u2192 B (C -> B)", touchLabel: "Clash: slide between C and B, either way (C -> B)" },
   // 6. Why it matters
   {
     type: "card",

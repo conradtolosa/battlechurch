@@ -981,6 +981,27 @@
       }, ABC_SLIDE_OVERLAP_MS);
     };
 
+    // A -> C / B -> C slide sent as C -> A (Reap) / C -> B (Clash): C goes
+    // down, then the other button while C is still down, then both come up
+    // as quick taps (nothing is left held, so nothing charges by accident).
+    const sendReorderedCSlide = (state, other) => {
+      pressSeg("C");
+      if (other === "B") queueComboSwipe("C", "B");
+      refresh();
+      setTimeout(() => {
+        pressSeg(other);
+        refresh();
+        setTimeout(() => {
+          releaseSeg("C");
+          refresh();
+        }, ABC_SLIDE_OVERLAP_MS);
+        setTimeout(() => {
+          releaseSeg(other);
+          refresh();
+        }, ABC_SLIDE_OVERLAP_MS + ABC_TAP_MS);
+      }, ABC_FAST_SEQUENCE_GAP_MS);
+    };
+
     // Finger has rested on the button: it's a hold, press it for real.
     const commitPending = (state) => {
       if (!state.pending || state.ended) return;
@@ -1063,6 +1084,16 @@
       if (!seg || seg === state.seg) return;
       const prev = state.seg;
       state.seg = seg;
+
+      if (state.pending && seg === "C" && (prev === "A" || prev === "B")) {
+        // Quick slide A -> C or B -> C. The game only knows C -> A (Reap) and
+        // C -> B (Clash), and nothing has been sent yet, so send it in that
+        // order: direction doesn't matter for slides with C.
+        state.pending = null;
+        clearTimeout(state.pendingTimer);
+        sendReorderedCSlide(state, prev);
+        return;
+      }
 
       if (state.pending) {
         // Quick slide straight off the first button: a sequence combo.
