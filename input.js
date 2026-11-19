@@ -745,6 +745,30 @@
     const circleEls = Array.from(arcEl.querySelectorAll(".arc-segment[data-seg]"));
     if (!circleEls.length) return;
     const labelEls = Array.from(arcEl.querySelectorAll(".arc-label[data-seg]"));
+    // Charge ring around each button + its small caption (SWORD / DASH /
+    // PRAY), which switches to CHARGING / READY while held.
+    const SVG_NS = "http://www.w3.org/2000/svg";
+    const rings = {};
+    const subLabels = {};
+    circleEls.forEach((el) => {
+      const seg = el.dataset.seg;
+      const r = Number(el.getAttribute("r")) || 50;
+      const ring = document.createElementNS(SVG_NS, "circle");
+      ring.setAttribute("cx", el.getAttribute("cx"));
+      ring.setAttribute("cy", el.getAttribute("cy"));
+      ring.setAttribute("r", String(r + 7));
+      ring.setAttribute("class", "abc-charge-ring");
+      ring.setAttribute("data-seg", seg);
+      ring.setAttribute("transform", `rotate(-90 ${el.getAttribute("cx")} ${el.getAttribute("cy")})`);
+      const circumference = 2 * Math.PI * (r + 7);
+      ring.style.strokeDasharray = String(circumference);
+      ring.style.strokeDashoffset = String(circumference);
+      ring.__circumference = circumference;
+      el.parentNode.insertBefore(ring, el);
+      rings[seg] = ring;
+      const sub = arcEl.querySelector(`.abc-sub[data-seg="${seg}"]`);
+      if (sub) subLabels[seg] = { el: sub, text: sub.textContent };
+    });
     const segmentMap = {
       A: { key: "ArrowLeft", setNesA: true },
       B: { key: "ArrowDown" },
@@ -762,12 +786,37 @@
       return Number.isFinite(pressedAt) && nowMs() - pressedAt >= (ABC_CHARGE_FALLBACK_MS[seg] || 1500);
     };
 
+    const chargeProgress = (seg, pressedAt) => {
+      const ready = typeof window !== "undefined" ? window.__battlechurchChargeReady : null;
+      if (ready && ready.progress && nowMs() - (Number(ready.at) || 0) < 250) {
+        return Number(ready.progress[seg]) || 0;
+      }
+      if (!Number.isFinite(pressedAt)) return 0;
+      return Math.min(1, (nowMs() - pressedAt) / (ABC_CHARGE_FALLBACK_MS[seg] || 1500));
+    };
+
     const refresh = () => {
       const charged = { A: false, B: false, C: false };
+      const progress = { A: 0, B: 0, C: 0 };
       pointers.forEach((state) => {
         state.held.forEach((seg) => {
           if (isCharged(seg, state.pressedAt[seg])) charged[seg] = true;
+          progress[seg] = Math.max(progress[seg], chargeProgress(seg, state.pressedAt[seg]));
         });
+      });
+      Object.keys(rings).forEach((seg) => {
+        const ring = rings[seg];
+        const held = holdCounts[seg] > 0;
+        const p = held ? (charged[seg] ? 1 : progress[seg]) : 0;
+        ring.style.strokeDashoffset = String(ring.__circumference * (1 - p));
+        ring.classList.toggle("is-visible", held && p > 0.02);
+        ring.classList.toggle("is-full", held && charged[seg]);
+        const sub = subLabels[seg];
+        if (sub) {
+          const text = !held || p <= 0.02 ? sub.text : charged[seg] ? "READY!" : "CHARGING";
+          if (sub.el.textContent !== text) sub.el.textContent = text;
+          sub.el.classList.toggle("is-ready", held && charged[seg]);
+        }
       });
       const touched = { A: false, B: false, C: false };
       pointers.forEach((state) => {

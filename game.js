@@ -5530,7 +5530,7 @@ let devArenaPickupSlots = [];
 const TUTORIAL_ARENA_BATCH_SIZE = 100;
 const TUTORIAL_ARENA_REINFORCE_THRESHOLD = 50;
 const TUTORIAL_ARENA_PRAYER_REFILL_MS = 4000;
-const TUTORIAL_ARENA_MOVE_CONTEXT_WINDOW_MS = 600;
+const TUTORIAL_ARENA_MOVE_CONTEXT_WINDOW_MS = 1500;
 const TUTORIAL_ARENA_SLASH_KILL_WINDOW_MS = 500;
 const TUTORIAL_ARENA_CLEAVE_KILL_WINDOW_MS = 500;
 // Tutorial chapters. "card" steps pause the action and explain what comes
@@ -5549,29 +5549,30 @@ const TUTORIAL_ARENA_OBJECTIVES = [
   {
     type: "card",
     label: "Auto-fire won't win this war",
-    body: "Battlechurch is about your three buttons, and combining them. Master them and you'll tear through anything.",
+    body: "Battlechurch is about your three buttons, and combining them. A is your Sword, B is your Dash and C is Prayer, which does many things. Master them and you'll tear through anything.",
     showButtons: true,
   },
-  // 3. One button at a time
+  // 3. One button at a time (auto-fire is paused during move drills, so only
+  //    the move being learned counts)
   { type: "kill_with_move", move: "Slash", target: 100, label: "A is your Sword. Slash 100 demons (A)" },
   { type: "dash_plus_kills", move: "Dash", dashTarget: 3, killTarget: 0, label: "B is your Dash. Dash 3 times (B)" },
-  { type: "kill_with_move", move: "Unity Strike", target: 100, label: "C commands your Congregation. Defeat 100 demons (C)" },
+  { type: "kill_with_move", move: "Unity Strike", target: 100, label: "C is Prayer. Tap C for a Unity Strike (C)" },
   // 4. Charging
   {
     type: "card",
-    label: "Hold to charge",
-    body: "Hold a button down, then let go, to unleash a much stronger attack.",
-    touchBody: "Hold a button until it glows, then let go, to unleash a much stronger attack.",
+    label: "Charging",
+    body: "Hold a button down to charge it. A charge meter fills while you hold. When it's full, let go to unleash a much stronger attack. Let go early and you just get the normal move.",
+    touchBody: "Hold a button down to charge it. A ring fills around the button while you hold, and it says READY when it's full. Then let go to unleash a much stronger attack. Let go early and you just get the normal move.",
   },
-  { type: "kill_with_move", move: "Blast", target: 100, label: "Hold A to throw a Blast (Charge A)" },
-  { type: "kill_with_move", move: "Crash", target: 100, label: "Hold B to Crash through demons (Charge B)" },
-  { type: "kill_with_move", move: "Purify", target: 100, label: "Hold C to Purify (Charge C)" },
+  { type: "kill_with_move", move: "Blast", target: 100, label: "Charge A until full, then let go: Blast (Charge A)" },
+  { type: "kill_with_move", move: "Crash", target: 100, label: "Charge B until full, then let go: Crash (Charge B)" },
+  { type: "kill_with_move", move: "Purify", target: 100, label: "Charge C until full, then let go: Purify (Charge C)" },
   // 5. Combos
   {
     type: "card",
     label: "Combos",
-    body: "Press one button, then another, to combo. Combos hit two to three times harder than a single slash, and they're how you beat tough enemies.",
-    touchBody: "Slide your thumb from one button to another to combo. Combos hit two to three times harder than a single slash, and they're how you beat tough enemies.",
+    body: "Press one button, then quickly press another, to combo. Combos hit two to three times harder than a single slash, and they're how you beat tough enemies.",
+    touchBody: "Slide your thumb quickly from one button to another to combo. Combos hit two to three times harder than a single slash, and they're how you beat tough enemies.",
   },
   { type: "kill_with_move", move: "Smash", target: 100, label: "Smash: B then A (B -> A)" },
   { type: "kill_with_move", move: "Cleave", target: 100, label: "Cleave: A then B (A -> B)" },
@@ -5588,11 +5589,16 @@ const TUTORIAL_ARENA_OBJECTIVES = [
     type: "card",
     label: "You're ready to fight",
     body: "That's everything you need. Press Continue to practice advanced combos, or Skip to start playing. Every move is listed under Pause > Moves.",
-    touchBody: "That's everything you need. Advanced combos: hold a button until it glows, slide onto another and hold until that glows too. Press Continue to practice them, or Skip to start playing.",
   },
   { type: "kill_with_move", move: "Clash", target: 100, label: "Clash: C then B (C -> B)" },
-  { type: "kill_with_move", move: "Thrash", target: 100, label: "Thrash: hold B, then press A (Charge B + A)" },
-  { type: "kill_with_move", move: "Prayer Storm", target: 100, label: "Prayer Storm: hold A, B and C (Charge A + B + C)" },
+  {
+    type: "card",
+    label: "Charge two at once",
+    body: "The strongest moves charge two buttons together. Hold both buttons down until BOTH charge meters are full, then let go.",
+    touchBody: "The strongest moves charge two buttons together. Hold one until it says READY, then slide onto the other (or press it with another finger) and hold until that says READY too. Then let go.",
+  },
+  { type: "kill_with_move", move: "Thrash", target: 100, label: "Thrash: charge B and A together (Charge B + A)" },
+  { type: "kill_with_move", move: "Prayer Storm", target: 100, label: "Prayer Storm: charge A, B and C together (Charge A + B + C)" },
 ];
 // The tutorial is forced the first time a player picks a save; this remembers
 // (per browser) that they've seen it so it only happens once.
@@ -5877,6 +5883,13 @@ function setTutorialArenaHud(hud, buttons, { menu = false } = {}) {
 
 function updateTutorialArenaHudState() {
   if (typeof window === "undefined") return;
+  // During move drills, pause the pastor's and congregation's auto-fire so
+  // only the move being learned kills demons (and counts).
+  window.__tutorialArenaBlockAutoFire = Boolean(
+    isTutorialArenaActive() &&
+    !tutorialArenaState?.pendingStart &&
+    tutorialArenaState?.currentObjective?.type === "kill_with_move",
+  );
   if (!isTutorialArenaActive()) {
     window.__tutorialArenaHud = null;
     window.__tutorialArenaPendingStart = false;
@@ -6158,6 +6171,7 @@ function exitTutorialArenaToPreviousScreen() {
     window.__tutorialArenaButtons = null;
     window.__tutorialArenaButtonLabels = null;
     window.__tutorialArenaMenuActive = false;
+    window.__tutorialArenaBlockAutoFire = false;
   }
   enemies.splice(0, enemies.length);
   projectiles.splice(0, projectiles.length);
@@ -7457,8 +7471,41 @@ function isPrayerBombInputSuppressed() {
   if (!meleeState) return false;
   return Boolean(
     meleeState.acSuperArmed ||
+    meleeState.cConsumedByCombo ||
     (meleeState.acSuperPrayerBombBlockTimer || 0) > 0,
   );
+}
+
+// Charged C used as part of a combo (Trash, Hedge): letting go of C must
+// only finish that combo, never also cast Purify or Unity Strike. Purify is
+// Charged C on its own.
+function markChargedCConsumedByCombo(meleeAttackState) {
+  // Marked even if C was let go in the same instant as the other button
+  // (lifting one finger off a slide releases both together).
+  if (!meleeAttackState) return;
+  meleeAttackState.cConsumedByCombo = true;
+  meleeAttackState.cConsumedReleasedAt = 0;
+  if (typeof Input !== "undefined") Input.prayerBombClickQueued = false;
+  if (typeof cancelCongregationTap === "function") cancelCongregationTap();
+}
+
+// Clear the flag shortly after C is let go (once every release path has
+// seen it), and keep any queued Purify / Unity Strike cancelled until then.
+function updateChargedCConsumedByCombo(meleeAttackState) {
+  if (!meleeAttackState?.cConsumedByCombo) return;
+  if (keysPressed.has("ArrowRight")) {
+    meleeAttackState.cConsumedReleasedAt = 0;
+    return;
+  }
+  if (typeof Input !== "undefined") Input.prayerBombClickQueued = false;
+  if (typeof cancelCongregationTap === "function") cancelCongregationTap();
+  const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+  if (!meleeAttackState.cConsumedReleasedAt) {
+    meleeAttackState.cConsumedReleasedAt = now;
+  } else if (now - meleeAttackState.cConsumedReleasedAt > 300) {
+    meleeAttackState.cConsumedByCombo = false;
+    meleeAttackState.cConsumedReleasedAt = 0;
+  }
 }
 window.isPrayerBombInputSuppressed = isPrayerBombInputSuppressed;
 const aimAssist = {
@@ -16597,6 +16644,7 @@ class CozyNpc {
   }
 
   tryNpcFire(dt) {
+    if (typeof window !== "undefined" && window.__tutorialArenaBlockAutoFire) return false;
     // NPCs can fire arrows once at full faith and respecting cooldowns.
     if (!this.active || this.departed) return false;
     if (this.isEnsnared()) return false;
@@ -27354,6 +27402,7 @@ function registerMeleeComboHit(target, meleeAttackState, moveNameOverride = null
   // Tutorial objective attribution: remember the most recent resolved move that hit this enemy.
   if (target && typeof target === "object") {
     target.tutorialLastMove = moveName;
+    target.tutorialLastMoveAt = typeof performance !== "undefined" ? performance.now() : Date.now();
   }
   const lastMoveName = names.length > 0 ? names[names.length - 1] : null;
   const isRepeatMove = chainActive && lastMoveName === moveName;
@@ -28636,6 +28685,7 @@ const BLANKA_ROLL_SWOOSH_TURNS_PER_SECOND = 5.5;
 
 function executeBlankaRoll(meleeAttackState) {
   if (!player) return;
+  markChargedCConsumedByCombo(meleeAttackState);
   showDualChargeReadyPreview(meleeAttackState, "Trash", { executed: true });
   showMoveBanner("Trash");
   const rollCost = (player.prayerChargeRequired || 6000) / 6;
@@ -30145,18 +30195,33 @@ function updateMeleeAttackSystem(dt) {
       Boolean(meleeAttackState.spinButtonDown && meleeAttackState.spinCharging) &&
       (meleeAttackState.spinChargeTimer || 0) >= holdBForAbc;
     const cHeldForAbc = keysPressed.has("ArrowRight");
+    updateChargedCConsumedByCombo(meleeAttackState);
     // Tell the touch buttons which buttons are fully charged, so they can glow
     // and treat a slide as "Charge X + Y" instead of "X then Y".
     if (typeof window !== "undefined") {
+      const cFull = Boolean(
+        cHeldForAbc &&
+        player &&
+        (player.prayerHoldLocked ||
+          Number(player.prayerHoldTimer || 0) >= (Number(PRAYER_BOMB_HOLD_TIME) || 1.0) - 0.02),
+      );
+      const clamp01 = (v) => Math.max(0, Math.min(1, Number(v) || 0));
       window.__battlechurchChargeReady = {
         A: Boolean(aFull),
         B: Boolean(bFull),
-        C: Boolean(
-          cHeldForAbc &&
-          player &&
-          (player.prayerHoldLocked ||
-            Number(player.prayerHoldTimer || 0) >= (Number(PRAYER_BOMB_HOLD_TIME) || 1.0) - 0.02),
-        ),
+        C: cFull,
+        // 0..1 charge meter for each button (drives the touch-button rings).
+        progress: {
+          A: meleeAttackState.buttonDown && meleeAttackState.isCharging
+            ? clamp01((meleeAttackState.chargeTimer || 0) / holdAForAbc)
+            : 0,
+          B: meleeAttackState.spinButtonDown && meleeAttackState.spinCharging
+            ? clamp01((meleeAttackState.spinChargeTimer || 0) / holdBForAbc)
+            : 0,
+          C: cHeldForAbc
+            ? (cFull ? 1 : clamp01(Number(player?.prayerHoldTimer || 0) / (Number(PRAYER_BOMB_HOLD_TIME) || 1.0)))
+            : 0,
+        },
         at: typeof performance !== "undefined" ? performance.now() : Date.now(),
       };
     }
@@ -30232,7 +30297,7 @@ function updateMeleeAttackSystem(dt) {
         keysJustPressed.delete(" ");
         return;
       }
-    } else if (purifyReleaseReadyNow) {
+    } else if (purifyReleaseReadyNow && !meleeAttackState.cConsumedByCombo) {
       if (typeof cancelCongregationTap === "function") cancelCongregationTap();
       if (typeof Input !== "undefined") Input.prayerBombClickQueued = false;
       const casted = player.castPrayerBomb({ allowWhileInvulnerable: true });
@@ -30246,6 +30311,7 @@ function updateMeleeAttackSystem(dt) {
     // Allow Charged-C Purify to fire during Trash lifetime without relying on click-queue plumbing.
     if (
       cJustReleasedForAbc &&
+      !meleeAttackState.cConsumedByCombo &&
       meleeAttackState.blankaRollActive &&
       meleeAttackState.blankaRollSawCHeld === true &&
       ((typeof performance !== "undefined" && typeof performance.now === "function"
@@ -30693,6 +30759,7 @@ function updateMeleeAttackSystem(dt) {
           );
           if (typeof Input !== "undefined") Input.prayerBombClickQueued = false;
           if (typeof cancelCongregationTap === "function") cancelCongregationTap();
+          markChargedCConsumedByCombo(meleeAttackState);
           showDualChargeReadyPreview(meleeAttackState, MOVE_NAME_AC_SUPER, { executed: true });
           showMoveBanner(MOVE_NAME_AC_SUPER);
           executeRingOfFireAttack(meleeAttackState);

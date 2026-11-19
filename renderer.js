@@ -15555,7 +15555,7 @@ function drawChurchUpgradeScreen(ctx, canvas, options = {}) {
       const entries = [
         { key: "A", name: "Sword", input: "Left Arrow / Xbox A" },
         { key: "B", name: "Dash", input: "Down Arrow / Xbox B" },
-        { key: "C", name: "Congregation", input: "Right Arrow / Xbox RB" },
+        { key: "C", name: "Prayer", input: "Right Arrow / Xbox RB" },
       ];
       const colW = (panelW - padX * 2) / entries.length;
       const circleY = y + 30;

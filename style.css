@@ -1915,3 +1915,29 @@ body.touch-enabled .touch-pause,
 body.touch-enabled #arcControl .arc-segment {
   pointer-events: auto;
 }
+
+/* Charge meter on each touch button: a ring that fills while the button is
+   held, turning gold and pulsing when the charge is full. */
+.abc-charge-ring {
+  fill: none;
+  stroke: #FFE7A8;
+  stroke-width: 10px;
+  stroke-linecap: round;
+  opacity: 0;
+  pointer-events: none;
+  transition: stroke-dashoffset 0.06s linear, opacity 0.1s ease-out;
+}
+
+.abc-charge-ring.is-visible {
+  opacity: 0.95;
+}
+
+.abc-charge-ring.is-full {
+  stroke: #FFC93C;
+  animation: abc-charged-pulse 0.5s ease-in-out infinite alternate;
+}
+
+.abc-sub.is-ready {
+  fill: #5a2a00;
+  font-weight: 900;
+}

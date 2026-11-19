@@ -2404,7 +2404,10 @@
         const meleeBlocking = meleeState && meleeState.projectileBlockTimer > 0;
 
       // Autofire using the player's current weapon, including during visitor sessions.
-      if (!meleeBlocking) {
+      // (Paused during tutorial move drills so only the move being learned kills.)
+      const tutorialBlocksAutoFire =
+        typeof window !== "undefined" && window.__tutorialArenaBlockAutoFire === true;
+      if (!meleeBlocking && !tutorialBlocksAutoFire) {
         if (activeWeapon === "arrow" && this.arrowCooldown <= 0) {
           this.tryAttack("arrow");
         } else if (activeWeapon === "wisdom_missle" && this.magicCooldown <= 0) {
@@ -4705,7 +4708,13 @@
       if (this.health <= 0) {
         this.health = 0;
         if (typeof window !== "undefined" && window.__battlechurchTutorialArenaActive) {
-          this.tutorialLastMove = String(window.__battlechurchTutorialLastMove || "");
+          // Prefer the move whose hit just landed (sword/combo hits tag the
+          // enemy); otherwise credit the move the player performed last.
+          const hitAt = Number(this.tutorialLastMoveAt) || 0;
+          const nowMs = typeof performance !== "undefined" ? performance.now() : Date.now();
+          if (!(this.tutorialLastMove && nowMs - hitAt < 150)) {
+            this.tutorialLastMove = String(window.__battlechurchTutorialLastMove || "");
+          }
           if (typeof window.onTutorialArenaEnemyKilledInstant === "function") {
             window.onTutorialArenaEnemyKilledInstant(this);
           }
