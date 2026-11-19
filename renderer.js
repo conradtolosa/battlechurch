@@ -15656,7 +15656,11 @@ function drawChurchUpgradeScreen(ctx, canvas, options = {}) {
       if (tutorialHud?.card) {
         drawTutorialArenaCard(ctx, canvas, tutorialHud, colors, UI_FONT_FAMILY);
       } else {
-      const baseY = canvas.height - 108;
+      // On touch screens the tutorial buttons are centered at the bottom, so
+      // lift the objective text above them.
+      const touchTextLift =
+        typeof document !== "undefined" && document.body?.classList.contains("touch-enabled") ? 58 : 0;
+      const baseY = canvas.height - 108 - touchTextLift;
       const titleSize = Math.max(28, Math.round(captionSize * 1.8));
       const progressSize = Math.max(20, Math.round(titleSize * 0.68));
       const moveKey = String(tutorialHud?.moveKey || "");
@@ -15796,7 +15800,11 @@ function drawChurchUpgradeScreen(ctx, canvas, options = {}) {
       ctx.font = `800 20px ${UI_FONT_FAMILY || "sans-serif"}`;
       const widths = labels.map((entry) => Math.ceil(ctx.measureText(entry.label).width + btnPadX * 2));
       const totalW = widths.reduce((sum, w) => sum + w, 0) + btnGap * (labels.length - 1);
-      let x = canvas.width - totalW - 18;
+      // On touch screens the A/B/C buttons sit bottom-right, so center the
+      // tutorial buttons instead of tucking them under the player's thumb.
+      const touchLayout =
+        typeof document !== "undefined" && document.body?.classList.contains("touch-enabled");
+      let x = touchLayout ? Math.round((canvas.width - totalW) / 2) : canvas.width - totalW - 18;
       const y = canvas.height - btnH - 18;
       const btnBounds = [];
       labels.forEach((entry, idx) => {

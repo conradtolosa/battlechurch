@@ -45,30 +45,28 @@
         </div>
         <div class="center-controls"></div>
         <div class="button-area right">
-          <svg id="arcControl" viewBox="0 0 220 220" role="group" aria-label="Action Arc">
-            <defs>
-              <path id="arcSpaceLabel" d="M 10.00 220.00 A 210.00 210.00 0 0 1 148.18 22.66" />
-              <path id="arcLabelA" d="M 80.00 220.00 A 140.00 140.00 0 0 1 114.04 114.04" />
-              <path id="arcLabelB" d="M 114.04 114.04 A 140.00 140.00 0 0 1 220.00 80.00" />
-              <path id="arcLabelC" d="M 148.18 22.66 A 210.00 210.00 0 0 1 220.00 10.00" />
-            </defs>
-            <path class="arc-segment arc-a" data-seg="A" d="M 70.00 220.00 A 150.00 150.00 0 0 1 113.93 113.93" />
-            <path class="arc-segment arc-b" data-seg="B" d="M 113.93 113.93 A 150.00 150.00 0 0 1 220.00 70.00" />
-            <path class="arc-segment arc-s" data-seg="S" d="M 10.00 220.00 A 210.00 210.00 0 0 1 148.18 22.66" />
-            <path class="arc-segment arc-c" data-seg="C" d="M 148.18 22.66 A 210.00 210.00 0 0 1 220.00 10.00" />
-            <text class="arc-label" data-seg="A">
-              <textPath href="#arcLabelA" startOffset="50%">A</textPath>
-            </text>
-            <text class="arc-label" data-seg="B">
-              <textPath href="#arcLabelB" startOffset="50%">B</textPath>
-            </text>
-            <text class="arc-label arc-label-space" data-seg="S">
-              <textPath href="#arcSpaceLabel" startOffset="42%">SPACE</textPath>
-            </text>
-            <text class="arc-label" data-seg="C">
-              <textPath href="#arcLabelC" startOffset="55%">C</textPath>
-            </text>
+          <svg id="arcControl" viewBox="0 0 260 250" role="group" aria-label="Action Buttons">
+            <!-- A, B and C in a triangle so every pair touches: slide from one
+                 button to another for combos (e.g. C then A = Reap). -->
+            <g class="abc-btn" data-seg="C">
+              <circle class="arc-segment arc-c" data-seg="C" cx="124" cy="68" r="54" />
+              <text class="arc-label" data-seg="C" x="124" y="62">C</text>
+              <text class="abc-sub" data-seg="C" x="124" y="92">PRAY</text>
+            </g>
+            <g class="abc-btn" data-seg="B">
+              <circle class="arc-segment arc-b" data-seg="B" cx="70" cy="180" r="54" />
+              <text class="arc-label" data-seg="B" x="70" y="174">B</text>
+              <text class="abc-sub" data-seg="B" x="70" y="204">DASH</text>
+            </g>
+            <g class="abc-btn" data-seg="A">
+              <circle class="arc-segment arc-a" data-seg="A" cx="184" cy="174" r="64" />
+              <text class="arc-label" data-seg="A" x="184" y="168">A</text>
+              <text class="abc-sub" data-seg="A" x="184" y="200">SWORD</text>
+            </g>
           </svg>
+          <button type="button" id="touchPauseButton" class="touch-pause" aria-label="Pause">
+            <span aria-hidden="true"></span><span aria-hidden="true"></span>
+          </button>
         </div>
       </div>
     </div>

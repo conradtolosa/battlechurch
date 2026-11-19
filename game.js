@@ -11,7 +11,9 @@ const gameWrapper = document.getElementById("gameWrapper");
 const touchControlsRoot = document.getElementById("touchControls");
 const moveStickBase = document.getElementById("moveStick");
 const aimStickBase = document.getElementById("aimStick");
-const virtualSpaceButton = document.getElementById("virtualSpaceButton");
+// On-screen pause button for touch (acts as Space: pause / resume).
+const virtualSpaceButton =
+  document.getElementById("virtualSpaceButton") || document.getElementById("touchPauseButton");
 const arcControl = document.getElementById("arcControl");
 
 let assets = null;
@@ -5559,6 +5561,7 @@ const TUTORIAL_ARENA_OBJECTIVES = [
     type: "card",
     label: "Hold to charge",
     body: "Hold a button down, then let go, to unleash a much stronger attack.",
+    touchBody: "Hold a button until it glows, then let go, to unleash a much stronger attack.",
   },
   { type: "kill_with_move", move: "Blast", target: 10, label: "Hold A to throw a Blast (Charge A)" },
   { type: "kill_with_move", move: "Crash", target: 10, label: "Hold B to Crash through demons (Charge B)" },
@@ -5568,6 +5571,7 @@ const TUTORIAL_ARENA_OBJECTIVES = [
     type: "card",
     label: "Combos",
     body: "Press one button, then another, to combo. Combos hit two to three times harder than a single slash, and they're how you beat tough enemies.",
+    touchBody: "Slide your thumb from one button to another to combo. Combos hit two to three times harder than a single slash, and they're how you beat tough enemies.",
   },
   { type: "kill_with_move", move: "Smash", target: 10, label: "Smash: B then A (B -> A)" },
   { type: "kill_with_move", move: "Cleave", target: 10, label: "Cleave: A then B (A -> B)" },
@@ -5584,6 +5588,7 @@ const TUTORIAL_ARENA_OBJECTIVES = [
     type: "card",
     label: "You're ready to fight",
     body: "That's everything you need. Press Continue to practice advanced combos, or Skip to start playing. Every move is listed under Pause > Moves.",
+    touchBody: "That's everything you need. Advanced combos: hold a button until it glows, slide onto another and hold until that glows too. Press Continue to practice them, or Skip to start playing.",
   },
   { type: "kill_with_move", move: "Clash", target: 10, label: "Clash: C then B (C -> B)" },
   { type: "kill_with_move", move: "Thrash", target: 10, label: "Thrash: hold B, then press A (Charge B + A)" },
@@ -5855,6 +5860,10 @@ function getTutorialArenaCurrentMoveContext() {
   return String(tutorialArenaCurrentMoveContext.move || "");
 }
 
+function isTouchControlsActive() {
+  return typeof document !== "undefined" && Boolean(document.body?.classList.contains("touch-enabled"));
+}
+
 function getTutorialArenaExitLabel() {
   return tutorialArenaFirstRun ? "Skip Tutorial" : "Back to Game";
 }
@@ -5916,7 +5925,9 @@ function updateTutorialArenaHudState() {
       {
         card: true,
         label,
-        body: String(objective.body || ""),
+        body: String(
+          (isTouchControlsActive() && objective.touchBody) || objective.body || "",
+        ),
         showButtons: Boolean(objective.showButtons),
         progressText: "",
         moveKey: "",
@@ -30132,6 +30143,21 @@ function updateMeleeAttackSystem(dt) {
       Boolean(meleeAttackState.spinButtonDown && meleeAttackState.spinCharging) &&
       (meleeAttackState.spinChargeTimer || 0) >= holdBForAbc;
     const cHeldForAbc = keysPressed.has("ArrowRight");
+    // Tell the touch buttons which buttons are fully charged, so they can glow
+    // and treat a slide as "Charge X + Y" instead of "X then Y".
+    if (typeof window !== "undefined") {
+      window.__battlechurchChargeReady = {
+        A: Boolean(aFull),
+        B: Boolean(bFull),
+        C: Boolean(
+          cHeldForAbc &&
+          player &&
+          (player.prayerHoldLocked ||
+            Number(player.prayerHoldTimer || 0) >= (Number(PRAYER_BOMB_HOLD_TIME) || 1.0) - 0.02),
+        ),
+        at: typeof performance !== "undefined" ? performance.now() : Date.now(),
+      };
+    }
     const fullPrayerReadyNow =
       Number(player?.prayerCharge || 0) >= Number(player?.prayerChargeRequired || 6000);
     const abcHoldReadyNow = Boolean(aFull && bFull && cHeldForAbc && fullPrayerReadyNow);

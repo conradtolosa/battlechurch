@@ -435,15 +435,54 @@
     });
   }
 
+  // Shared C-button (congregation) tap/hold logic, used by keyboard, touch
+  // and gamepad so they all behave the same. Pressing A or B while a C tap is
+  // pending "dirties" it, which cancels Unity Strike so C -> A / C -> B can
+  // become Reap / Clash.
+  function noteActionKeyPressed(key) {
+    if (key === "ArrowRight") {
+      cButtonHeldAt = typeof performance !== "undefined" ? performance.now() : Date.now();
+      congregationTapDirtied = false;
+      return;
+    }
+    if ((key === "ArrowLeft" || key === "ArrowDown") && (cButtonHeldAt > 0 || congregationTapCount === 1)) {
+      congregationTapDirtied = true;
+    }
+  }
+
+  function handleCButtonReleased() {
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const heldMs = cButtonHeldAt > 0 ? now - cButtonHeldAt : 0;
+    if (heldMs >= PRAYER_BOMB_HOLD_THRESHOLD_MS) {
+      prayerBombClickQueued = true;
+      congregationTapDirtied = false;
+    } else if (congregationTapDirtied) {
+      congregationTapCount = 0;
+      congregationTapStartedAt = 0;
+      congregationTapDirtied = false;
+    } else if (
+      congregationTapCount === 1 &&
+      congregationTapStartedAt > 0 &&
+      now - congregationTapStartedAt <= CONGREGATION_DOUBLE_TAP_WINDOW_MS
+    ) {
+      congregationClickQueued = true;
+      congregationClickKind = "path";
+      congregationTapCount = 0;
+      congregationTapStartedAt = 0;
+    } else {
+      congregationTapCount = 1;
+      congregationTapStartedAt = now;
+    }
+    cButtonHeldAt = 0;
+  }
+
   function pressVirtualKey(key, { setNesA = false, setPrayerBomb = false } = {}) {
     const normalized = normalizeKey(key);
     if (!keysDown.has(normalized)) keysJustPressed.add(normalized);
     keysDown.add(normalized);
     virtualInput.virtualKeysDown.add(normalized);
     if (setNesA) nesAButtonActive = true;
-    if (setPrayerBomb) {
-      cButtonHeldAt = typeof performance !== "undefined" ? performance.now() : Date.now();
-    }
+    noteActionKeyPressed(key);
   }
 
   function pressGamepadKey(key, { setNesA = false, setPrayerBomb = false } = {}) {
@@ -452,9 +491,7 @@
     keysDown.add(normalized);
     gamepadState.virtualKeysDown.add(normalized);
     if (setNesA) nesAButtonActive = true;
-    if (setPrayerBomb) {
-      cButtonHeldAt = typeof performance !== "undefined" ? performance.now() : Date.now();
-    }
+    noteActionKeyPressed(key);
   }
 
   function releaseGamepadKey(key, { setNesA = false, setPrayerBomb = false } = {}) {
@@ -462,30 +499,7 @@
     keysDown.delete(normalized);
     gamepadState.virtualKeysDown.delete(normalized);
     if (setNesA) nesAButtonActive = false;
-    if (setPrayerBomb) {
-      const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-      const heldMs = cButtonHeldAt > 0 ? now - cButtonHeldAt : 0;
-      if (heldMs >= PRAYER_BOMB_HOLD_THRESHOLD_MS) {
-        prayerBombClickQueued = true;
-      } else {
-        if (
-          congregationTapCount === 1 &&
-          congregationTapStartedAt > 0 &&
-          now - congregationTapStartedAt <= CONGREGATION_DOUBLE_TAP_WINDOW_MS
-        ) {
-          congregationClickQueued = true;
-          congregationClickKind = "path";
-          congregationTapCount = 0;
-          congregationTapStartedAt = 0;
-          congregationTapDirtied = false;
-        } else {
-          congregationTapCount = 1;
-          congregationTapStartedAt = now;
-          congregationTapDirtied = false;
-        }
-      }
-      cButtonHeldAt = 0;
-    }
+    if (setPrayerBomb) handleCButtonReleased();
   }
 
   function resetGamepadState() {
@@ -664,30 +678,7 @@
     keysDown.delete(normalized);
     virtualInput.virtualKeysDown.delete(normalized);
     if (setNesA) nesAButtonActive = false;
-    if (setPrayerBomb) {
-      const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-      const heldMs = cButtonHeldAt > 0 ? now - cButtonHeldAt : 0;
-      if (heldMs >= PRAYER_BOMB_HOLD_THRESHOLD_MS) {
-        prayerBombClickQueued = true;
-      } else {
-        if (
-          congregationTapCount === 1 &&
-          congregationTapStartedAt > 0 &&
-          now - congregationTapStartedAt <= CONGREGATION_DOUBLE_TAP_WINDOW_MS
-        ) {
-          congregationClickQueued = true;
-          congregationClickKind = "path";
-          congregationTapCount = 0;
-          congregationTapStartedAt = 0;
-          congregationTapDirtied = false;
-        } else {
-          congregationTapCount = 1;
-          congregationTapStartedAt = now;
-          congregationTapDirtied = false;
-        }
-      }
-      cButtonHeldAt = 0;
-    }
+    if (setPrayerBomb) handleCButtonReleased();
   }
 
   function queueComboSwipe(from, to) {
@@ -705,115 +696,264 @@
     return comboSwipe;
   }
 
+  // A / B / C touch buttons (three circles in a triangle, see index.html).
+  //   Tap            -> tap the button
+  //   Hold           -> charge (Blast / Crash / Purify)
+  //   Slide X -> Y   -> combo "X then Y" (Smash, Cleave, Reap, Clash)
+  //   Hold X until it glows, slide to Y -> "Charge X + Y" (X stays held:
+  //                     Thrash, Hedge, Trash; keep going for Prayer Storm)
+  // Every finger is tracked separately, so two-thumb play works too.
+  const ABC_CHARGE_FALLBACK_MS = { A: 1500, B: 1500, C: 1000 };
+  const ABC_HIT_RADIUS_SCALE = 1.3;
+  // On a slide, how long both buttons are held together before the first
+  // one is released.
+  const ABC_SLIDE_OVERLAP_MS = 30;
+  // A touch waits this long before counting as a hold, so a tap or a quick
+  // slide can be sent to the game as a clean, fast key sequence.
+  const ABC_INTENT_MS = 200;
+  // Fast slide: gap between the first and second button going down.
+  const ABC_FAST_SEQUENCE_GAP_MS = 60;
+  // Length of a tap.
+  const ABC_TAP_MS = 50;
+
   function configureArcControl(arcEl) {
     if (!arcEl) return;
-    const segmentEls = Array.from(arcEl.querySelectorAll(".arc-segment"));
-    if (!segmentEls.length) return;
-    const arcState = { pointerId: null, activeSegment: null };
+    const circleEls = Array.from(arcEl.querySelectorAll(".arc-segment[data-seg]"));
+    if (!circleEls.length) return;
+    const labelEls = Array.from(arcEl.querySelectorAll(".arc-label[data-seg]"));
     const segmentMap = {
       A: { key: "ArrowLeft", setNesA: true },
       B: { key: "ArrowDown" },
-      S: { key: " " },
       C: { key: "ArrowRight", setPrayerBomb: true },
     };
+    const pointers = new Map(); // pointerId -> { seg, held: Set, pressedAt: {} }
+    const holdCounts = { A: 0, B: 0, C: 0 };
+    let rafId = null;
 
-    const setActiveSegment = (seg) => {
-      if (seg === arcState.activeSegment) return;
-      if (arcState.activeSegment && seg && arcState.activeSegment !== seg) {
-        queueComboSwipe(arcState.activeSegment, seg);
-      }
-      if (arcState.activeSegment) {
-        const prevCfg = segmentMap[arcState.activeSegment];
-        if (prevCfg) releaseVirtualKey(prevCfg.key, prevCfg);
-      }
-      arcState.activeSegment = seg;
-      segmentEls.forEach((el) => {
-        el.classList.toggle("is-active", el.dataset.seg === seg);
+    const nowMs = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
+
+    const isCharged = (seg, pressedAt) => {
+      const ready = typeof window !== "undefined" ? window.__battlechurchChargeReady : null;
+      if (ready && nowMs() - (Number(ready.at) || 0) < 250) return Boolean(ready[seg]);
+      return Number.isFinite(pressedAt) && nowMs() - pressedAt >= (ABC_CHARGE_FALLBACK_MS[seg] || 1500);
+    };
+
+    const refresh = () => {
+      const charged = { A: false, B: false, C: false };
+      pointers.forEach((state) => {
+        state.held.forEach((seg) => {
+          if (isCharged(seg, state.pressedAt[seg])) charged[seg] = true;
+        });
       });
-      if (seg) {
-        const cfg = segmentMap[seg];
-        const upgradeSelect =
-          seg === "A" && typeof window !== "undefined" && window.UpgradeScreen?.isVisible?.();
-        if (upgradeSelect && typeof window.UpgradeScreen?.selectFocused === "function") {
-          window.UpgradeScreen.selectFocused();
-        } else if (cfg) {
-          pressVirtualKey(cfg.key, cfg);
-        }
+      const touched = { A: false, B: false, C: false };
+      pointers.forEach((state) => {
+        if (state.pending) touched[state.pending] = true;
+      });
+      circleEls.forEach((el) => {
+        const seg = el.dataset.seg;
+        el.classList.toggle("is-active", holdCounts[seg] > 0 || touched[seg]);
+        el.classList.toggle("is-charged", holdCounts[seg] > 0 && charged[seg]);
+      });
+      labelEls.forEach((el) => {
+        el.classList.toggle("is-active", holdCounts[el.dataset.seg] > 0);
+      });
+    };
+
+    // While any finger is down, keep the "charged" glow in sync with the game.
+    const tick = () => {
+      refresh();
+      rafId = pointers.size && typeof requestAnimationFrame === "function"
+        ? requestAnimationFrame(tick)
+        : null;
+    };
+    const ensureTicking = () => {
+      if (rafId === null && typeof requestAnimationFrame === "function") {
+        rafId = requestAnimationFrame(tick);
       }
     };
 
-    const getSegmentFromEvent = (event) => {
-      const rect = arcEl.getBoundingClientRect();
-      const size = Math.min(rect.width, rect.height);
-      if (!size) return null;
-      const styles = window.getComputedStyle(arcEl);
-      const thickness =
-        parseFloat(styles.getPropertyValue("--arc-thickness")) || size * 0.35;
-      const innerRadius = Math.max(0, size - 70);
-      const innerHalf = thickness * 0.5;
-      const innerBandMin = Math.max(0, innerRadius - innerHalf);
-      const innerBandMax = innerRadius + innerHalf;
-      const outerRadius = Math.max(0, size - 10);
-      const outerBandThickness = 40;
-      const outerBandMin = Math.max(0, outerRadius - outerBandThickness * 0.5);
-      const outerBandMax = outerRadius + outerBandThickness * 0.5;
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-      const dx = x - size;
-      const dy = y - size;
-      const dist = Math.hypot(dx, dy);
-      if (dist < innerBandMin || dist > outerBandMax) return null;
-      let deg = Math.atan2(dy, dx) * (180 / Math.PI);
-      if (deg < 0) deg += 360;
-      if (deg < 180 || deg > 270) return null;
-      if (dist >= outerBandMin && dist <= outerBandMax) {
-        if (deg < 250) return "S";
-        return "C";
+    const pressSeg = (seg) => {
+      const cfg = segmentMap[seg];
+      if (!cfg) return;
+      holdCounts[seg] += 1;
+      if (holdCounts[seg] > 1) return;
+      const upgradeSelect =
+        seg === "A" && typeof window !== "undefined" && window.UpgradeScreen?.isVisible?.();
+      if (upgradeSelect && typeof window.UpgradeScreen?.selectFocused === "function") {
+        window.UpgradeScreen.selectFocused();
+        return;
       }
-      if (dist < innerBandMin || dist > innerBandMax) return null;
-      if (deg < 225) return "A";
-      if (deg < 255) return "B";
-      return null;
+      pressVirtualKey(cfg.key, cfg);
+    };
+
+    const releaseSeg = (seg) => {
+      const cfg = segmentMap[seg];
+      if (!cfg || holdCounts[seg] <= 0) return;
+      holdCounts[seg] -= 1;
+      if (holdCounts[seg] === 0) releaseVirtualKey(cfg.key, cfg);
+    };
+
+    // Nearest button whose (slightly enlarged) circle contains the point, so
+    // the small gaps between buttons never drop a slide.
+    const getSegmentAt = (clientX, clientY) => {
+      let best = null;
+      let bestScore = Infinity;
+      circleEls.forEach((el) => {
+        const rect = el.getBoundingClientRect();
+        const radius = rect.width / 2;
+        if (!radius) return;
+        const cx = rect.left + radius;
+        const cy = rect.top + rect.height / 2;
+        const score = Math.hypot(clientX - cx, clientY - cy) / radius;
+        if (score < bestScore) {
+          bestScore = score;
+          best = el.dataset.seg;
+        }
+      });
+      return bestScore <= ABC_HIT_RADIUS_SCALE ? best : null;
+    };
+
+    const pressHeld = (state, seg) => {
+      state.held.add(seg);
+      state.pressedAt[seg] = nowMs();
+      pressSeg(seg);
+    };
+
+    // Quick press + release (a tap) that the game sees for a few frames.
+    const tapSeg = (seg) => {
+      pressSeg(seg);
+      refresh();
+      setTimeout(() => {
+        releaseSeg(seg);
+        refresh();
+      }, ABC_TAP_MS);
+    };
+
+    const queueSwipeIfUsed = (prev, seg) => {
+      // The game reads a "swipe" only for B -> A (Smash) and C -> B (Clash).
+      if ((prev === "B" && seg === "A") || (prev === "C" && seg === "B")) {
+        queueComboSwipe(prev, seg);
+      }
+    };
+
+    // "X then Y" as the game likes it: Y goes down while X is still down,
+    // then X is released a moment later.
+    const overlapInto = (state, prev, seg) => {
+      pressHeld(state, seg);
+      refresh();
+      if (!state.held.has(prev)) return;
+      setTimeout(() => {
+        if (state.ended || !state.held.has(prev) || state.seg === prev) return;
+        state.held.delete(prev);
+        releaseSeg(prev);
+        refresh();
+      }, ABC_SLIDE_OVERLAP_MS);
+    };
+
+    // Finger has rested on the button: it's a hold, press it for real.
+    const commitPending = (state) => {
+      if (!state.pending || state.ended) return;
+      const seg = state.pending;
+      state.pending = null;
+      clearTimeout(state.pendingTimer);
+      pressHeld(state, seg);
+      refresh();
     };
 
     const start = (event) => {
       if (!virtualInput.enabled) return;
-      if (arcState.pointerId !== null) return;
-      const seg = getSegmentFromEvent(event);
+      const seg = getSegmentAt(event.clientX, event.clientY);
       if (!seg) return;
-      arcState.pointerId = event.pointerId;
       try {
         arcEl.setPointerCapture(event.pointerId);
       } catch (e) {}
-      setActiveSegment(seg);
+      // Don't tell the game yet: wait briefly to see if this is a tap, a
+      // hold or the start of a slide combo.
+      const state = { seg, held: new Set(), pressedAt: {}, pending: seg, ended: false };
+      state.pendingTimer = setTimeout(() => commitPending(state), ABC_INTENT_MS);
+      pointers.set(event.pointerId, state);
+      refresh();
+      ensureTicking();
       event.preventDefault();
     };
 
     const move = (event) => {
-      if (arcState.pointerId !== event.pointerId) return;
-      const seg = getSegmentFromEvent(event);
-      setActiveSegment(seg);
+      const state = pointers.get(event.pointerId);
+      if (!state) return;
       event.preventDefault();
+      const seg = getSegmentAt(event.clientX, event.clientY);
+      // Off the buttons: keep holding whatever we're on (sticky).
+      if (!seg || seg === state.seg) return;
+      const prev = state.seg;
+      state.seg = seg;
+
+      if (state.pending) {
+        // Quick slide straight off the first button: a sequence combo.
+        // Send "X down, Y down shortly after, X up" in one tight burst.
+        state.pending = null;
+        clearTimeout(state.pendingTimer);
+        pressHeld(state, prev);
+        queueSwipeIfUsed(prev, seg);
+        refresh();
+        setTimeout(() => {
+          if (state.ended) {
+            tapSeg(seg);
+            return;
+          }
+          if (state.seg !== seg) return; // already moved on
+          overlapInto(state, prev, seg);
+        }, ABC_FAST_SEQUENCE_GAP_MS);
+        return;
+      }
+
+      if (state.held.has(seg)) return; // slid back onto a button we're still holding
+      const prevCharged = state.held.has(prev) && isCharged(prev, state.pressedAt[prev]);
+      queueSwipeIfUsed(prev, seg);
+      if (prevCharged) {
+        // "Charge X + Y": keep X held and hold Y too (hold Y until it glows
+        // for Thrash / Hedge; keep sliding for Prayer Storm).
+        pressHeld(state, seg);
+        refresh();
+        return;
+      }
+      overlapInto(state, prev, seg);
     };
 
-    const release = (event) => {
-      if (arcState.pointerId !== event.pointerId) return;
-      arcState.pointerId = null;
+    const end = (event) => {
+      const state = pointers.get(event.pointerId);
+      if (!state) return;
+      pointers.delete(event.pointerId);
+      state.ended = true;
       try {
         arcEl.releasePointerCapture(event.pointerId);
       } catch (e) {}
-      setActiveSegment(null);
+      if (state.pending) {
+        // Lifted before the hold kicked in: a tap.
+        const seg = state.pending;
+        state.pending = null;
+        clearTimeout(state.pendingTimer);
+        tapSeg(seg);
+      }
+      state.held.forEach((seg) => releaseSeg(seg));
+      state.held.clear();
+      refresh();
       event.preventDefault();
     };
 
     arcEl.addEventListener("pointerdown", start);
     arcEl.addEventListener("pointermove", move);
-    arcEl.addEventListener("pointerup", release);
-    arcEl.addEventListener("pointercancel", release);
-    arcEl.addEventListener("pointerleave", (event) => {
-      if (arcState.pointerId !== event.pointerId) return;
-      release(event);
-    });
+    arcEl.addEventListener("pointerup", end);
+    arcEl.addEventListener("pointercancel", end);
+    arcEl.addEventListener("lostpointercapture", end);
+
+    // Used when touch controls are hidden/reset.
+    arcEl.__resetAbcButtons = () => {
+      pointers.clear();
+      holdCounts.A = 0;
+      holdCounts.B = 0;
+      holdCounts.C = 0;
+      refresh();
+    };
   }
 
   function ensureVirtualControlsConfigured() {
@@ -861,6 +1001,9 @@
       virtualInput.virtualKeysDown.clear();
     }
     nesAButtonActive = false;
+    if (arcControl && typeof arcControl.__resetAbcButtons === "function") {
+      arcControl.__resetAbcButtons();
+    }
   }
 
   function setVirtualControlsVisible(visible) {
