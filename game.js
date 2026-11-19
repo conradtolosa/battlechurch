@@ -5503,6 +5503,8 @@ let tutorialArenaLaunchContext = {
 // Snapshot of whatever screen/game state was live when the tutorial was opened,
 // so "Back to Game" can put the player back exactly where they were.
 let tutorialArenaReturnSnapshot = null;
+// How long the "Tutorial Complete" banner stays up before returning.
+const TUTORIAL_ARENA_FINISHED_RETURN_MS = 3500;
 const DEV_MELEE_FEED_MAX = 12;
 const DEV_MELEE_COMBO_WINDOW_MS = 1300;
 let devMeleeMoveFeed = [];
@@ -5816,6 +5818,14 @@ function updateTutorialArenaHudState() {
     return;
   }
   window.__tutorialArenaPendingStart = false;
+  if (tutorialArenaState?.finishedReturnAt > 0) {
+    window.__tutorialArenaHud = {
+      label: "Tutorial Complete",
+      progressText: "Returning...",
+      moveKey: "",
+    };
+    return;
+  }
   if (!tutorialArenaState?.currentObjective) {
     window.__tutorialArenaHud = null;
     return;
@@ -6059,17 +6069,25 @@ function startTutorialArenaObjective(index) {
   if (tutorialArenaState?.pendingStart) return;
   const objective = TUTORIAL_ARENA_OBJECTIVES[index];
   if (!objective) {
+    // All objectives done: show the banner, keep the tutorial buttons up,
+    // then return to the screen the player came from (same as Back to Game).
     queueLevelAnnouncement("Tutorial Complete", "All core moves completed", {
       duration: 3.0,
       skipMissionBrief: true,
       allowDuringSuppression: true,
     });
-    tutorialArenaMode = false;
-    if (typeof window !== "undefined") {
-      window.__tutorialArenaHud = null;
-    }
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    tutorialArenaState.currentObjective = null;
+    tutorialArenaState.completionQueuedAt = 0;
+    tutorialArenaState.finishedReturnAt = now + TUTORIAL_ARENA_FINISHED_RETURN_MS;
+    enemies.splice(0, enemies.length);
+    projectiles.splice(0, projectiles.length);
+    tutorialArenaCurrentMoveContext = { move: "", at: 0 };
+    clearTutorialArenaMoveKillWindows();
+    updateTutorialArenaHudState();
     return;
   }
+  tutorialArenaState.finishedReturnAt = 0;
   tutorialArenaState.objectiveIndex = index;
   tutorialArenaState.currentObjective = objective;
   enemies.splice(0, enemies.length);
@@ -30819,6 +30837,14 @@ function updateGame(dt) {
       const now = typeof performance !== "undefined" ? performance.now() : Date.now();
       if (now >= completionAt) {
         startTutorialArenaObjective((tutorialArenaState?.objectiveIndex || 0) + 1);
+      }
+    }
+    const finishedReturnAt = Number(tutorialArenaState?.finishedReturnAt) || 0;
+    if (finishedReturnAt > 0) {
+      const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+      if (now >= finishedReturnAt) {
+        exitTutorialArenaToGame();
+        return;
       }
     }
   }
