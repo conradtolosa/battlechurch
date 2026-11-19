@@ -733,6 +733,8 @@
   // of the nearest button and close to the edge of the next one.
   const ABC_SEAM_MIN_SCORE = 0.78;
   const ABC_SEAM_MAX_SCORE = 1.12;
+  // Middle of the triangle, close to all three buttons: hold A + B + C.
+  const ABC_TRIPLE_MAX_SCORE = 1.15;
   // On a slide, how long both buttons are held together before the first
   // one is released.
   const ABC_SLIDE_OVERLAP_MS = 30;
@@ -922,8 +924,10 @@
     };
 
     const queueSwipeIfUsed = (prev, seg) => {
-      // The game reads a "swipe" only for B -> A (Smash) and C -> B (Clash).
-      if ((prev === "B" && seg === "A") || (prev === "C" && seg === "B")) {
+      // Only C -> B (Clash) needs the "swipe" signal. B -> A (Smash) comes out
+      // from the key timing alone; sending a swipe there made the game also
+      // treat the A press as an extra Slash.
+      if (prev === "C" && seg === "B") {
         queueComboSwipe(prev, seg);
       }
     };
@@ -954,6 +958,7 @@
 
     // A thumb resting where two buttons meet presses BOTH (one thumb can't
     // land on two buttons at once otherwise). Returns the pair, or null.
+    // Returns the pair (or all three, at the middle) the thumb is resting on.
     const getSeamPairAt = (clientX, clientY) => {
       const scores = circleEls.map((el) => {
         const rect = el.getBoundingClientRect();
@@ -962,8 +967,11 @@
         const cy = rect.top + rect.height / 2;
         return { seg: el.dataset.seg, score: Math.hypot(clientX - cx, clientY - cy) / radius };
       }).sort((a, b) => a.score - b.score);
-      const [best, second] = scores;
+      const [best, second, third] = scores;
       if (!best || !second) return null;
+      if (third && third.score <= ABC_TRIPLE_MAX_SCORE) {
+        return [best.seg, second.seg, third.seg];
+      }
       if (best.score >= ABC_SEAM_MIN_SCORE && second.score <= ABC_SEAM_MAX_SCORE) {
         return [best.seg, second.seg];
       }
@@ -977,7 +985,8 @@
       try {
         arcEl.setPointerCapture(event.pointerId);
       } catch (e) {}
-      const seam = getSeamPairAt(event.clientX, event.clientY);
+      const onJunction = Boolean(event.target?.classList?.contains("arc-junction"));
+      const seam = onJunction ? ["A", "B", "C"] : getSeamPairAt(event.clientX, event.clientY);
       if (seam) {
         // Both buttons go down together and stay held (charge both).
         const both = { seg: seam[0], held: new Set(), pressedAt: {}, pending: null, ended: false, both: true };

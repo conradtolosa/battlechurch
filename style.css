@@ -1956,3 +1956,15 @@ body.touch-enabled #arcControl .arc-segment {
 .abc-cooldown-ring.is-visible {
   opacity: 0.9;
 }
+
+/* Center dot where A, B and C meet: holds all three (Prayer Storm). */
+.arc-junction {
+  fill: #FFE7A8;
+  stroke: rgba(10, 15, 31, 0.85);
+  stroke-width: 3px;
+  opacity: 0.9;
+}
+
+body.touch-enabled #arcControl .arc-junction {
+  pointer-events: auto;
+}

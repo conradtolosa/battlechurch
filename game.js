@@ -5607,45 +5607,66 @@ const TUTORIAL_ARENA_OBJECTIVES = [
     type: "card",
     label: "Charge two at once",
     body: "Advanced moves charge two buttons together. Hold BOTH buttons down until BOTH charge meters are full, then let go. These are optional: press Continue to practice them, or Skip to start playing.",
-    touchBody: "Advanced moves charge two buttons together. Put your thumb where the two buttons meet to hold both (or use two fingers), and hold until both say READY. Then let go. These are optional: Continue to practice, or Skip to start playing.",
+    touchBody: "Advanced moves charge two buttons together. Put your thumb where the two buttons meet to hold both (or use two fingers), and hold until both say READY. Then let go. The dot in the middle holds all three. These are optional: Continue to practice, or Skip to start playing.",
   },
   { type: "kill_with_move", move: "Thrash", target: 100, label: "Thrash: charge B and A together (Charge B + A)" },
   { type: "kill_with_move", move: "Hedge", target: 100, label: "Hedge: charge A and C together (Charge A + C)" },
   { type: "kill_with_move", move: "Trash", target: 100, label: "Trash: charge B, then hold C too (Charge B + C)" },
-  { type: "kill_with_move", move: "Prayer Storm", target: 100, label: "Prayer Storm: charge A, B and C together (Charge A + B + C)" },
-  // 8. Combo strings
+  { type: "kill_with_move", move: "Prayer Storm", target: 100, label: "Prayer Storm: charge A, B and C together (Charge A + B + C)", touchLabel: "Prayer Storm: hold the center dot until all three are READY (Charge A + B + C)" },
+  // 8. Combo strings (no congregation: just you and a practice dummy that
+  //    walks, swings and can't be defeated)
   {
     type: "card",
+    arena: "dummy",
     label: "Combo strings",
-    body: "Like combos in fighting games such as Street Fighter or Mortal Kombat, you can string moves together. Each hit within a moment of the last builds a Hit Chain, and every 4th hit knocks the enemy down. Start with A: it needs no meter. Then use a move that does, and finish with A while it refills. Practice on the armored dummy: it can't be defeated.",
+    body: "Like combos in fighting games such as Street Fighter or Mortal Kombat, you can string moves together. Each hit within a moment of the last builds a Hit Chain, and every 4th hit knocks the enemy down. Start with A: it needs no meter. Then use moves that do. Practice on the armored dummy: it can't be defeated.",
   },
   {
     type: "combo_string",
-    sequence: ["Slash", "Smash", "Slash"],
-    inputs: "A,  B \u2192 A,  A",
+    arena: "dummy",
+    sequence: ["Slash", "Smash", "Reap"],
+    inputs: "A,  B \u2192 A,  C \u2192 A",
     target: 3,
-    label: "Combo string: Slash, Smash, Slash",
+    label: "Combo string: Slash, Smash, Reap",
   },
   {
     type: "combo_string",
-    sequence: ["Slash", "Reap", "Slash"],
-    inputs: "A,  C \u2192 A,  A",
+    arena: "dummy",
+    sequence: ["Slash", "Reap", "Smash"],
+    inputs: "A,  C \u2192 A,  B \u2192 A",
     target: 3,
-    label: "Combo string: Slash, Reap, Slash",
+    label: "Combo string: Slash, Reap, Smash",
   },
   {
     type: "combo_string",
-    sequence: ["Blast", "Slash", "Smash", "Slash"],
-    inputs: "Charge A,  A,  B \u2192 A,  A",
+    arena: "dummy",
+    sequence: ["Blast", "Smash", "Reap"],
+    inputs: "Charge A,  B \u2192 A,  C \u2192 A",
     target: 3,
-    label: "Combo string: Blast, Slash, Smash, Slash",
+    label: "Combo string: Blast, Smash, Reap",
   },
   {
     type: "card",
+    arena: "dummy",
     label: "Combos to try",
-    body: "Slash, Smash, Slash (A,  B \u2192 A,  A).   Slash, Reap, Slash (A,  C \u2192 A,  A).   Blast, Slash, Smash, Slash (charge A,  A,  B \u2192 A,  A).   Bonus: hit an enemy right after its attack misses for a Counter Hit. The rest of that chain does extra damage.",
+    body: "Slash, Smash, Reap (A,  B \u2192 A,  C \u2192 A).   Slash, Reap, Smash (A,  C \u2192 A,  B \u2192 A).   Blast, Smash, Reap (charge A,  B \u2192 A,  C \u2192 A).",
   },
-  // 9. Done
+  // 9. Counter Hits and Punish Counters
+  {
+    type: "card",
+    arena: "dummy",
+    label: "Counter Hits",
+    body: "When an enemy swings at you and misses, it's open for a split second. Hit it right then for a Counter Hit: extra damage and a burst of grace. Step or Dash out of the swing, then strike back fast.",
+  },
+  { type: "counter_hit", arena: "dummy", target: 3, label: "Dodge the dummy's swing, then hit it: 3 Counter Hits" },
+  {
+    type: "card",
+    arena: "dummy",
+    label: "Punish Counters",
+    body: "A Counter Hit starts a Punish Counter: keep hitting the same enemy without letting the chain drop, and every hit in that chain does extra damage. Counter Hit, then go straight into a combo string.",
+  },
+  { type: "punish_counter", arena: "dummy", target: 6, label: "Counter Hit, then keep hitting: 6 Punish Counter hits" },
+  // 10. Done
   {
     type: "card",
     label: "You're ready to fight",
@@ -5942,7 +5963,9 @@ function updateTutorialArenaHudState() {
   window.__tutorialArenaBlockAutoFire = Boolean(
     isTutorialArenaActive() &&
     !tutorialArenaState?.pendingStart &&
-    ["kill_with_move", "combo_string"].includes(tutorialArenaState?.currentObjective?.type),
+    ["kill_with_move", "combo_string", "counter_hit", "punish_counter"].includes(
+      tutorialArenaState?.currentObjective?.type,
+    ),
   );
   if (!isTutorialArenaActive()) {
     window.__tutorialArenaHud = null;
@@ -6026,6 +6049,9 @@ function updateTutorialArenaHudState() {
     const seq = Array.isArray(objective.sequence) ? objective.sequence : [];
     const step = Math.max(0, Math.min(seq.length - 1, Number(tutorialArenaState.comboStep) || 0));
     progressText = `${objective.inputs}   |   ${tutorialArenaState.moveKillCount}/${objective.target} done   |   next: ${seq[step] || ""}`;
+    moveKey = "";
+  } else if (objective.type === "counter_hit" || objective.type === "punish_counter") {
+    progressText = `${tutorialArenaState.moveKillCount}/${objective.target}`;
     moveKey = "";
   } else if (objective.type === "kill_any" || objective.type === "kill_armored") {
     progressText = `${tutorialArenaState.anyKillCount}/${objective.target}`;
@@ -6305,6 +6331,34 @@ function handleTutorialArenaButtons() {
   });
 }
 
+// The dummy section is just you and the dummy: park the congregation NPCs
+// and put them back when leaving it (or the tutorial).
+function setTutorialArenaCongregationHidden(hidden) {
+  if (!tutorialArenaState) return;
+  if (hidden && !tutorialArenaState.hiddenNpcs) {
+    tutorialArenaState.hiddenNpcs = npcs.slice();
+    npcs.splice(0, npcs.length);
+  } else if (!hidden && tutorialArenaState.hiddenNpcs) {
+    npcs.splice(0, npcs.length, ...tutorialArenaState.hiddenNpcs);
+    tutorialArenaState.hiddenNpcs = null;
+  }
+}
+
+// Counter Hit / Punish Counter drills (called from getCounterHitResult).
+function recordTutorialArenaCounter(kind) {
+  if (!isTutorialArenaActive() || !tutorialArenaState) return;
+  const objective = tutorialArenaState.currentObjective;
+  if (!objective || tutorialArenaState.completionQueuedAt > 0) return;
+  if (
+    (objective.type === "counter_hit" && kind === "counter") ||
+    (objective.type === "punish_counter" && kind === "punish")
+  ) {
+    tutorialArenaState.moveKillCount += 1;
+    updateTutorialArenaHudState();
+    checkTutorialArenaObjectiveComplete();
+  }
+}
+
 function startTutorialArenaObjective(index) {
   if (!isTutorialArenaActive()) return;
   if (tutorialArenaState?.pendingStart) return;
@@ -6326,6 +6380,7 @@ function startTutorialArenaObjective(index) {
     return;
   }
   tutorialArenaState.finishedReturnAt = 0;
+  setTutorialArenaCongregationHidden(objective.arena === "dummy");
   tutorialArenaState.objectiveIndex = index;
   tutorialArenaState.currentObjective = objective;
   enemies.splice(0, enemies.length);
@@ -6361,7 +6416,11 @@ function checkTutorialArenaObjectiveComplete() {
   if (objective.type === "card") return; // cards advance on Continue only
   if (objective.type === "kill_armored") {
     done = tutorialArenaState.anyKillCount >= objective.target;
-  } else if (objective.type === "combo_string") {
+  } else if (
+    objective.type === "combo_string" ||
+    objective.type === "counter_hit" ||
+    objective.type === "punish_counter"
+  ) {
     done = tutorialArenaState.moveKillCount >= objective.target;
   } else if (objective.type === "dash_plus_kills") {
     done = tutorialArenaState.dashCount >= objective.dashTarget && tutorialArenaState.anyKillCount >= objective.killTarget;
@@ -6529,7 +6588,8 @@ function maintainTutorialArenaArmoredSpawns() {
   }
 }
 
-// Combo strings: one stationary armored practice dummy that can't be defeated.
+// Combo strings / counters: one slow armored practice dummy that walks up and
+// swings at you but can't be defeated.
 // Refilled every frame, so it can't be defeated (kept short so its health
 // label stays readable).
 const TUTORIAL_ARENA_DUMMY_HEALTH = 9999;
@@ -6545,9 +6605,6 @@ function maintainTutorialArenaComboDummy() {
     });
     if (!dummy) return;
     dummy.tutorialComboDummy = true;
-    dummy.devImmobileTestDummy = true;
-    dummy.devAnchorX = spot.x;
-    dummy.devAnchorY = spot.y;
     dummy.spawnOffscreenTimer = 0;
   }
   dummy.maxHealth = TUTORIAL_ARENA_DUMMY_HEALTH;
@@ -6562,13 +6619,14 @@ function maintainTutorialArenaWaveSpawns() {
   if (!isTutorialArenaActive() || !tutorialArenaState?.currentObjective) return;
   if (tutorialArenaState.pendingStart) return;
   const objectiveType = tutorialArenaState.currentObjective.type;
-  if (objectiveType === "move_wasd" || objectiveType === "card") return;
+  if (objectiveType === "move_wasd") return;
+  if (objectiveType === "card" && tutorialArenaState.currentObjective.arena !== "dummy") return;
   if (tutorialArenaState.completionQueuedAt > 0) return;
   if (objectiveType === "kill_armored") {
     maintainTutorialArenaArmoredSpawns();
     return;
   }
-  if (objectiveType === "combo_string") {
+  if (tutorialArenaState.currentObjective.arena === "dummy") {
     maintainTutorialArenaComboDummy();
     return;
   }
@@ -27226,6 +27284,7 @@ function getCounterHitResult(target, baseDamage, meleeAttackState = null) {
     Number.isFinite(meleeAttackState.punishCounterExpiresAt) &&
     now <= meleeAttackState.punishCounterExpiresAt;
   if (punishActive) {
+    recordTutorialArenaCounter("punish");
     return {
       damage: Math.max(1, Math.round(base * PUNISH_COUNTER_MULTIPLIER)),
       baseDamage: base,
@@ -27252,6 +27311,7 @@ function getCounterHitResult(target, baseDamage, meleeAttackState = null) {
   }
   rewardMeleeGraceBurst(target, COUNTER_HIT_GRACE_GEMS, 48);
   queueCounterHitText(target, meleeAttackState);
+  recordTutorialArenaCounter("counter");
   return {
     damage: Math.max(1, Math.round(base * PUNISH_COUNTER_MULTIPLIER)),
     baseDamage: base,
