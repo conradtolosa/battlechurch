@@ -4661,6 +4661,10 @@
           multiplier = damageType === "projectile" && damageClass === "armored" ? 0.7 : 1.0;
         }
       }
+      // Tutorial "armored demons" lesson: auto-fire barely scratches them.
+      if (this.tutorialArmorTest && damageType === "projectile") {
+        multiplier = 0.1;
+      }
       const scaledDamage = Math.max(0, Math.round(amount * multiplier));
       if (
         typeof window !== "undefined" &&

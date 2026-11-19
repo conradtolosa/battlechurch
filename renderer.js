@@ -15497,6 +15497,90 @@ function drawChurchUpgradeScreen(ctx, canvas, options = {}) {
   // Persistent state for the wave pill crossfade.
   const _wavePill = { text: "", alpha: 0 };
 
+  // Tutorial "card" step: a centered panel that explains the next chapter.
+  function drawTutorialArenaCard(ctx, canvas, hud, colors, fontFamily) {
+    const font = fontFamily || "sans-serif";
+    const panelW = Math.min(canvas.width - 64, 980);
+    const padX = 48;
+    const titleSize = 44;
+    const bodySize = 26;
+    const bodyLineH = Math.round(bodySize * 1.45);
+    ctx.save();
+    ctx.font = `600 ${bodySize}px ${font}`;
+    const words = String(hud.body || "").split(/\s+/).filter(Boolean);
+    const lines = [];
+    let line = "";
+    words.forEach((word) => {
+      const test = line ? `${line} ${word}` : word;
+      if (line && ctx.measureText(test).width > panelW - padX * 2) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = test;
+      }
+    });
+    if (line) lines.push(line);
+    const buttonRowH = hud.showButtons ? 150 : 0;
+    const panelH = 64 + titleSize + 28 + lines.length * bodyLineH + buttonRowH + 48;
+    const panelX = (canvas.width - panelW) / 2;
+    const footerSpace = 18 + 44 + 24; // keep clear of the button row
+    const panelY = Math.max(24, (canvas.height - footerSpace - panelH) / 2);
+
+    ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "rgba(24, 14, 12, 0.94)";
+    ctx.strokeStyle = colors.gold || "#DDA677";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.roundRect(panelX, panelY, panelW, panelH, 18);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
+    let y = panelY + 64 + titleSize * 0.7;
+    ctx.fillStyle = colors.gold || "#DDA677";
+    ctx.font = `800 ${titleSize}px ${font}`;
+    ctx.fillText(String(hud.label || ""), canvas.width / 2, y);
+    y += 28 + bodyLineH * 0.6;
+    ctx.fillStyle = colors.softWhite || "#DFDFC4";
+    ctx.font = `600 ${bodySize}px ${font}`;
+    lines.forEach((text) => {
+      ctx.fillText(text, canvas.width / 2, y);
+      y += bodyLineH;
+    });
+
+    if (hud.showButtons) {
+      // A / B / C diagram: what each button does.
+      const entries = [
+        { key: "A", name: "Sword", input: "Left Arrow / Xbox A" },
+        { key: "B", name: "Dash", input: "Down Arrow / Xbox B" },
+        { key: "C", name: "Congregation", input: "Right Arrow / Xbox RB" },
+      ];
+      const colW = (panelW - padX * 2) / entries.length;
+      const circleY = y + 30;
+      entries.forEach((entry, idx) => {
+        const cx = panelX + padX + colW * idx + colW / 2;
+        ctx.fillStyle = "rgba(250, 222, 154, 0.95)";
+        ctx.beginPath();
+        ctx.arc(cx, circleY, 30, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#2a1610";
+        ctx.font = `900 32px ${font}`;
+        ctx.textBaseline = "middle";
+        ctx.fillText(entry.key, cx, circleY + 1);
+        ctx.textBaseline = "alphabetic";
+        ctx.fillStyle = colors.gold || "#DDA677";
+        ctx.font = `800 28px ${font}`;
+        ctx.fillText(entry.name, cx, circleY + 72);
+        ctx.fillStyle = "rgba(223, 223, 196, 0.75)";
+        ctx.font = `600 18px ${font}`;
+        ctx.fillText(entry.input, cx, circleY + 102);
+      });
+    }
+    ctx.restore();
+  }
+
   function drawTotalCongregationPill() {
     const b = requireBindings();
     const { ctx, canvas, UI_FONT_FAMILY, gameStarted, levelAnnouncements } = b;
@@ -15569,6 +15653,9 @@ function drawChurchUpgradeScreen(ctx, canvas, options = {}) {
 
     ctx.save();
     if (tutorialActive) {
+      if (tutorialHud?.card) {
+        drawTutorialArenaCard(ctx, canvas, tutorialHud, colors, UI_FONT_FAMILY);
+      } else {
       const baseY = canvas.height - 108;
       const titleSize = Math.max(28, Math.round(captionSize * 1.8));
       const progressSize = Math.max(20, Math.round(titleSize * 0.68));
@@ -15685,20 +15772,27 @@ function drawChurchUpgradeScreen(ctx, canvas, options = {}) {
         ctx.fillText(tutorialProgress, canvas.width / 2, progressY);
       }
 
+      } // end non-card objective text
       const btnH = 44;
       const btnPadX = 18;
       const btnGap = 12;
       const pendingStart =
         typeof window !== "undefined" && window.__tutorialArenaPendingStart === true;
-      const labels = pendingStart
-        ? [
-            { key: "tutorialStart", label: "Start Tutorial" },
-          ]
-        : [
-            { key: "tutorialPrev", label: "Prev" },
-            { key: "tutorialNext", label: "Next" },
-            { key: "tutorialBack", label: "Back to Game" },
-          ];
+      const publishedLabels =
+        typeof window !== "undefined" && Array.isArray(window.__tutorialArenaButtonLabels)
+          ? window.__tutorialArenaButtonLabels
+          : null;
+      const labels = publishedLabels && publishedLabels.length
+        ? publishedLabels
+        : pendingStart
+          ? [
+              { key: "tutorialStart", label: "Start Tutorial" },
+            ]
+          : [
+              { key: "tutorialPrev", label: "Prev" },
+              { key: "tutorialNext", label: "Next" },
+              { key: "tutorialBack", label: "Back to Game" },
+            ];
       ctx.font = `800 20px ${UI_FONT_FAMILY || "sans-serif"}`;
       const widths = labels.map((entry) => Math.ceil(ctx.measureText(entry.label).width + btnPadX * 2));
       const totalW = widths.reduce((sum, w) => sum + w, 0) + btnGap * (labels.length - 1);

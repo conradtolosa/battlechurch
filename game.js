@@ -5531,22 +5531,76 @@ const TUTORIAL_ARENA_PRAYER_REFILL_MS = 4000;
 const TUTORIAL_ARENA_MOVE_CONTEXT_WINDOW_MS = 600;
 const TUTORIAL_ARENA_SLASH_KILL_WINDOW_MS = 500;
 const TUTORIAL_ARENA_CLEAVE_KILL_WINDOW_MS = 500;
+// Tutorial chapters. "card" steps pause the action and explain what comes
+// next; the rest are short practice drills. Labels ending in "(...)" have the
+// parenthetical replaced on screen by the move's button icons.
 const TUTORIAL_ARENA_OBJECTIVES = [
-  { type: "move_wasd", label: "Move with WASD or XBox Controller" },
-  { type: "kill_any", target: 100, label: "Kill 100 Enemies with Auto Fire" },
-  { type: "kill_with_move", move: "Slash", target: 100, label: "Kill 100 enemies with Slash (A)" },
-  { type: "dash_plus_kills", move: "Dash", dashTarget: 5, killTarget: 100, label: "Dash 5 times and kill 100 enemies" },
-  { type: "kill_with_move", move: "Blast", target: 100, label: "Kill 100 enemies with Blast (Charge A)" },
-  { type: "kill_with_move", move: "Crash", target: 100, label: "Kill 100 enemies with Crash (Charge B)" },
-  { type: "kill_with_move", move: "Smash", target: 100, label: "Kill 100 enemies with Smash (B -> A)" },
-  { type: "kill_with_move", move: "Reap", target: 100, label: "Kill 100 enemies with Reap (C -> A)" },
-  { type: "kill_with_move", move: "Clash", target: 100, label: "Kill 100 enemies with Clash (C -> B)" },
-  { type: "kill_with_move", move: "Cleave", target: 50, label: "Kill 50 enemies with Cleave (A -> B)" },
-  { type: "kill_with_move", move: "Thrash", target: 50, label: "Kill 50 enemies with Thrash (Charge B + A)" },
-  { type: "kill_with_move", move: "Purify", target: 100, label: "Kill 100 enemies with Purify (Charge C)" },
-  { type: "kill_with_move", move: "Prayer Storm", target: 100, label: "Kill 100 enemies with Prayer Storm (Charge A + B + C)" },
-  { type: "kill_with_move", move: "Unity Strike", target: 100, label: "Kill 100 enemies with Unity Strike (C)" },
+  // 1. Basics
+  {
+    type: "card",
+    label: "Welcome to Battlechurch",
+    body: "Demons are attacking your town. Your pastor leads the fight, and your congregation fights beside you. First, the basics.",
+  },
+  { type: "move_wasd", label: "Move with WASD or Xbox Controller" },
+  { type: "kill_any", target: 15, label: "Your pastor fires automatically. Defeat 15 demons" },
+  // 2. The point of the game
+  {
+    type: "card",
+    label: "Auto-fire won't win this war",
+    body: "Battlechurch is about your three buttons, and combining them. Master them and you'll tear through anything.",
+    showButtons: true,
+  },
+  // 3. One button at a time
+  { type: "kill_with_move", move: "Slash", target: 10, label: "A is your Sword. Slash 10 demons (A)" },
+  { type: "dash_plus_kills", move: "Dash", dashTarget: 3, killTarget: 0, label: "B is your Dash. Dash 3 times (B)" },
+  { type: "kill_with_move", move: "Unity Strike", target: 10, label: "C commands your Congregation. Defeat 10 demons (C)" },
+  // 4. Charging
+  {
+    type: "card",
+    label: "Hold to charge",
+    body: "Hold a button down, then let go, to unleash a much stronger attack.",
+  },
+  { type: "kill_with_move", move: "Blast", target: 10, label: "Hold A to throw a Blast (Charge A)" },
+  { type: "kill_with_move", move: "Crash", target: 10, label: "Hold B to Crash through demons (Charge B)" },
+  { type: "kill_with_move", move: "Purify", target: 10, label: "Hold C to Purify (Charge C)" },
+  // 5. Combos
+  {
+    type: "card",
+    label: "Combos",
+    body: "Press one button, then another, to combo. Combos hit two to three times harder than a single slash, and they're how you beat tough enemies.",
+  },
+  { type: "kill_with_move", move: "Smash", target: 10, label: "Smash: B then A (B -> A)" },
+  { type: "kill_with_move", move: "Cleave", target: 10, label: "Cleave: A then B (A -> B)" },
+  { type: "kill_with_move", move: "Reap", target: 10, label: "Reap: C then A (C -> A)" },
+  // 6. Why it matters
+  {
+    type: "card",
+    label: "Armored demons",
+    body: "Armor shrugs off auto-fire. Get close and use your sword and combos to break through.",
+  },
+  { type: "kill_armored", target: 3, label: "Defeat 3 armored demons with your sword and combos" },
+  // 7. Advanced (optional)
+  {
+    type: "card",
+    label: "You're ready to fight",
+    body: "That's everything you need. Press Continue to practice advanced combos, or Skip to start playing. Every move is listed under Pause > Moves.",
+  },
+  { type: "kill_with_move", move: "Clash", target: 10, label: "Clash: C then B (C -> B)" },
+  { type: "kill_with_move", move: "Thrash", target: 10, label: "Thrash: hold B, then press A (Charge B + A)" },
+  { type: "kill_with_move", move: "Prayer Storm", target: 10, label: "Prayer Storm: hold A, B and C (Charge A + B + C)" },
 ];
+// The tutorial is forced the first time a player picks a save; this remembers
+// (per browser) that they've seen it so it only happens once.
+const TUTORIAL_SEEN_STORAGE_KEY = "battlechurch.tutorialSeen.v1";
+let tutorialSeenThisSession = false;
+// When set, runs after the tutorial closes (e.g. continue on to the map).
+let tutorialArenaExitContinuation = null;
+// True while the tutorial was forced on a first-time player.
+let tutorialArenaFirstRun = false;
+const TUTORIAL_ARENA_ARMORED_TYPE = "armoredSkeleton";
+// Auto-fire barely scratches these (see Enemy.takeDamage in entities.js), so
+// the lesson "use your sword and combos" is unmistakable.
+const TUTORIAL_ARENA_ARMORED_HEALTH = 700;
 let tutorialArenaState = null;
 let tutorialArenaPrayerRefillAt = 0;
 let tutorialArenaLastPrayerCharge = null;
@@ -5801,68 +5855,97 @@ function getTutorialArenaCurrentMoveContext() {
   return String(tutorialArenaCurrentMoveContext.move || "");
 }
 
+function getTutorialArenaExitLabel() {
+  return tutorialArenaFirstRun ? "Skip Tutorial" : "Back to Game";
+}
+
+function setTutorialArenaHud(hud, buttons, { menu = false } = {}) {
+  window.__tutorialArenaHud = hud;
+  window.__tutorialArenaButtonLabels = buttons;
+  // Lets the controller's A/B buttons act as Confirm/Back on menu-like steps.
+  window.__tutorialArenaMenuActive = Boolean(menu);
+}
+
 function updateTutorialArenaHudState() {
   if (typeof window === "undefined") return;
   if (!isTutorialArenaActive()) {
     window.__tutorialArenaHud = null;
     window.__tutorialArenaPendingStart = false;
+    window.__tutorialArenaButtonLabels = null;
+    window.__tutorialArenaMenuActive = false;
     return;
   }
+  const exitButton = { key: "tutorialBack", label: getTutorialArenaExitLabel() };
   if (tutorialArenaState?.pendingStart) {
-    window.__tutorialArenaHud = {
-      label: "Start Tutorial",
-      progressText: "Press Start Tutorial",
-      moveKey: "",
-    };
     window.__tutorialArenaPendingStart = true;
+    setTutorialArenaHud(
+      {
+        label: tutorialArenaFirstRun ? "Learn to Play" : "Start Tutorial",
+        progressText: tutorialArenaFirstRun
+          ? "A quick tutorial before your first battle"
+          : "Press Start Tutorial",
+        moveKey: "",
+      },
+      [{ key: "tutorialStart", label: "Start Tutorial" }, exitButton],
+      { menu: true },
+    );
     return;
   }
   window.__tutorialArenaPendingStart = false;
+  const stepButtons = [
+    { key: "tutorialPrev", label: "Prev" },
+    { key: "tutorialNext", label: "Next" },
+    exitButton,
+  ];
   if (tutorialArenaState?.finishedReturnAt > 0) {
-    window.__tutorialArenaHud = {
-      label: "Tutorial Complete",
-      progressText: "Returning...",
-      moveKey: "",
-    };
+    setTutorialArenaHud(
+      { label: "Tutorial Complete", progressText: "Returning...", moveKey: "" },
+      stepButtons,
+    );
     return;
   }
   if (!tutorialArenaState?.currentObjective) {
-    window.__tutorialArenaHud = null;
+    setTutorialArenaHud(null, null);
     return;
   }
   const objective = tutorialArenaState.currentObjective;
   const label = String(objective.label || "");
+  if (objective.type === "card") {
+    const index = Number(tutorialArenaState.objectiveIndex) || 0;
+    setTutorialArenaHud(
+      {
+        card: true,
+        label,
+        body: String(objective.body || ""),
+        showButtons: Boolean(objective.showButtons),
+        progressText: "",
+        moveKey: "",
+      },
+      [
+        ...(index > 0 ? [{ key: "tutorialPrev", label: "Prev" }] : []),
+        { key: "tutorialNext", label: "Continue" },
+        exitButton,
+      ],
+      { menu: true },
+    );
+    return;
+  }
+  let progressText = `${tutorialArenaState.moveKillCount}/${objective.target}`;
+  let moveKey = String(objective.move || "");
   if (objective.type === "dash_plus_kills") {
-    window.__tutorialArenaHud = {
-      label,
-      progressText: `Dashes ${tutorialArenaState.dashCount}/${objective.dashTarget} | Kills ${tutorialArenaState.anyKillCount}/${objective.killTarget}`,
-      moveKey: String(objective.move || ""),
-    };
-    return;
-  }
-  if (objective.type === "kill_any") {
-    window.__tutorialArenaHud = {
-      label,
-      progressText: `${tutorialArenaState.anyKillCount}/${objective.target}`,
-      moveKey: "",
-    };
-    return;
-  }
-  if (objective.type === "move_wasd") {
+    progressText = objective.killTarget > 0
+      ? `Dashes ${tutorialArenaState.dashCount}/${objective.dashTarget} | Kills ${tutorialArenaState.anyKillCount}/${objective.killTarget}`
+      : `Dashes ${tutorialArenaState.dashCount}/${objective.dashTarget}`;
+  } else if (objective.type === "kill_any" || objective.type === "kill_armored") {
+    progressText = `${tutorialArenaState.anyKillCount}/${objective.target}`;
+    moveKey = "";
+  } else if (objective.type === "move_wasd") {
     const seen = tutorialArenaState?.movementKeysSeen || {};
     const count = (seen.w ? 1 : 0) + (seen.a ? 1 : 0) + (seen.s ? 1 : 0) + (seen.d ? 1 : 0);
-    window.__tutorialArenaHud = {
-      label,
-      progressText: `${count}/4`,
-      moveKey: "",
-    };
-    return;
+    progressText = `${count}/4`;
+    moveKey = "";
   }
-  window.__tutorialArenaHud = {
-    label,
-    progressText: `${tutorialArenaState.moveKillCount}/${objective.target}`,
-    moveKey: String(objective.move || ""),
-  };
+  setTutorialArenaHud({ label, progressText, moveKey }, stepButtons);
 }
 
 function announceTutorialArenaObjective() {
@@ -5991,7 +6074,56 @@ function restoreTutorialArenaReturnSnapshot(snapshot) {
   });
 }
 
+function hasSeenTutorial() {
+  if (tutorialSeenThisSession) return true;
+  try {
+    return window.localStorage?.getItem(TUTORIAL_SEEN_STORAGE_KEY) === "1";
+  } catch (e) {
+    return false;
+  }
+}
+
+function markTutorialSeen() {
+  tutorialSeenThisSession = true;
+  try {
+    window.localStorage?.setItem(TUTORIAL_SEEN_STORAGE_KEY, "1");
+  } catch (e) {}
+}
+
+// First-time players: run the tutorial before `continueFn` (e.g. opening the
+// map for the save they picked). Everyone else goes straight to `continueFn`.
+function runFirstTimeTutorialThen(continueFn) {
+  if (hasSeenTutorial() || !player || isTutorialArenaActive()) {
+    continueFn();
+    return;
+  }
+  tutorialArenaFirstRun = true;
+  tutorialArenaExitContinuation = continueFn;
+  requestTutorialArenaLaunch("title");
+  if (!isTutorialArenaActive()) {
+    // Couldn't start it for some reason; don't block the player.
+    tutorialArenaFirstRun = false;
+    tutorialArenaExitContinuation = null;
+    continueFn();
+  }
+}
+
 function exitTutorialArenaToGame() {
+  const continuation = tutorialArenaExitContinuation;
+  tutorialArenaExitContinuation = null;
+  tutorialArenaFirstRun = false;
+  markTutorialSeen();
+  exitTutorialArenaToPreviousScreen();
+  if (typeof continuation === "function") {
+    try {
+      continuation();
+    } catch (e) {
+      console.error("Tutorial continuation failed", e);
+    }
+  }
+}
+
+function exitTutorialArenaToPreviousScreen() {
   const snapshot = tutorialArenaReturnSnapshot;
   tutorialArenaReturnSnapshot = null;
   tutorialArenaMode = false;
@@ -6006,6 +6138,8 @@ function exitTutorialArenaToGame() {
     window.__tutorialArenaPendingStart = false;
     window.__tutorialArenaHud = null;
     window.__tutorialArenaButtons = null;
+    window.__tutorialArenaButtonLabels = null;
+    window.__tutorialArenaMenuActive = false;
   }
   enemies.splice(0, enemies.length);
   projectiles.splice(0, projectiles.length);
@@ -6029,6 +6163,14 @@ function exitTutorialArenaToGame() {
 
 function handleTutorialArenaButtons() {
   if (!isTutorialArenaActive()) return false;
+  // Esc (or controller B on card/start screens) = Back to Game / Skip Tutorial.
+  // Handled here because the shared menu-button code would swallow it.
+  if (keysJustPressed.has("escape") || keysJustPressed.has("Escape")) {
+    keysJustPressed.delete("escape");
+    keysJustPressed.delete("Escape");
+    exitTutorialArenaToGame();
+    return true;
+  }
   const buttons =
     typeof window !== "undefined" && Array.isArray(window.__tutorialArenaButtons)
       ? window.__tutorialArenaButtons
@@ -6120,7 +6262,10 @@ function checkTutorialArenaObjectiveComplete() {
   if (tutorialArenaState.pendingStart) return;
   const objective = tutorialArenaState.currentObjective;
   let done = false;
-  if (objective.type === "dash_plus_kills") {
+  if (objective.type === "card") return; // cards advance on Continue only
+  if (objective.type === "kill_armored") {
+    done = tutorialArenaState.anyKillCount >= objective.target;
+  } else if (objective.type === "dash_plus_kills") {
     done = tutorialArenaState.dashCount >= objective.dashTarget && tutorialArenaState.anyKillCount >= objective.killTarget;
   } else if (objective.type === "kill_any") {
     done = tutorialArenaState.anyKillCount >= objective.target;
@@ -6156,8 +6301,17 @@ function onTutorialArenaEnemyDefeated(enemy) {
   if (!isTutorialArenaActive() || !tutorialArenaState?.currentObjective || !enemy) return;
   if (enemy.__tutorialObjectiveCounted) return;
   enemy.__tutorialObjectiveCounted = true;
-  if (enemy.type !== "miniImp") return;
   const objective = tutorialArenaState.currentObjective;
+  if (enemy.tutorialArmorTest) {
+    if (objective.type === "kill_armored") {
+      tutorialArenaState.anyKillCount += 1;
+      updateTutorialArenaHudState();
+      checkTutorialArenaObjectiveComplete();
+    }
+    return;
+  }
+  if (enemy.type !== "miniImp") return;
+  if (objective.type === "kill_armored") return; // only armored demons count here
   tutorialArenaState.anyKillCount += 1;
   if (objective.type === "kill_with_move") {
     const objectiveMove = String(objective.move || "");
@@ -6202,7 +6356,7 @@ function collectTutorialArenaInstantDeaths() {
   for (let i = 0; i < enemies.length; i += 1) {
     const enemy = enemies[i];
     if (!enemy || enemy.__tutorialObjectiveCounted) continue;
-    if (enemy.type !== "miniImp") continue;
+    if (enemy.type !== "miniImp" && !enemy.tutorialArmorTest) continue;
     if (enemy.state === "death" || enemy.dead || (Number.isFinite(enemy.health) && enemy.health <= 0)) {
       onTutorialArenaEnemyDefeated(enemy);
     }
@@ -6246,11 +6400,47 @@ function spawnTutorialArenaBatch() {
   tutorialArenaState.batchSpawned = true;
 }
 
+// Armored lesson: keep the remaining armored demons on the field (no imp swarm,
+// so auto-fire visibly bounces off them).
+function maintainTutorialArenaArmoredSpawns() {
+  const objective = tutorialArenaState?.currentObjective;
+  if (!objective) return;
+  const alive = enemies.filter(
+    (enemy) => enemy && enemy.tutorialArmorTest && !enemy.dead && enemy.state !== "death",
+  ).length;
+  const needed = Math.max(0, objective.target - tutorialArenaState.anyKillCount - alive);
+  if (!needed) return;
+  const width = Math.max(1, Number(canvas?.width) || 1920);
+  for (let i = 0; i < needed; i += 1) {
+    const side = tutorialArenaState.nextSpawnSide === "left" ? "left" : "right";
+    tutorialArenaState.nextSpawnSide = side === "left" ? "right" : "left";
+    const point = getTutorialArenaSwarmSpawnPoint(side);
+    point.x = side === "left" ? width * 0.12 : width * 0.88;
+    const enemy = spawnEnemyOfType(TUTORIAL_ARENA_ARMORED_TYPE, point, {
+      skipSpawnEffects: false,
+      applyCameraShake: i === 0,
+    });
+    if (!enemy) continue;
+    enemy.tutorialArmorTest = true;
+    enemy.maxHealth = TUTORIAL_ARENA_ARMORED_HEALTH;
+    enemy.health = TUTORIAL_ARENA_ARMORED_HEALTH;
+    if (enemy.config) {
+      enemy.config.maxHealth = TUTORIAL_ARENA_ARMORED_HEALTH;
+      enemy.config.health = TUTORIAL_ARENA_ARMORED_HEALTH;
+    }
+  }
+}
+
 function maintainTutorialArenaWaveSpawns() {
   if (!isTutorialArenaActive() || !tutorialArenaState?.currentObjective) return;
   if (tutorialArenaState.pendingStart) return;
-  if (tutorialArenaState.currentObjective.type === "move_wasd") return;
+  const objectiveType = tutorialArenaState.currentObjective.type;
+  if (objectiveType === "move_wasd" || objectiveType === "card") return;
   if (tutorialArenaState.completionQueuedAt > 0) return;
+  if (objectiveType === "kill_armored") {
+    maintainTutorialArenaArmoredSpawns();
+    return;
+  }
   if (!tutorialArenaState.batchSpawned) {
     spawnTutorialArenaBatch();
     return;
@@ -10740,8 +10930,12 @@ async function refreshTitleCloudSaveOption() {
   }
 }
 
-async function openMapFromCloudSave(saveId) {
+async function openMapFromCloudSave(saveId, { skipTutorialGate = false } = {}) {
   if (!saveId) return;
+  if (!skipTutorialGate && !hasSeenTutorial()) {
+    runFirstTimeTutorialThen(() => void openMapFromCloudSave(saveId, { skipTutorialGate: true }));
+    return;
+  }
   setDemoSandboxRunActive(false);
   titleDemoSaveOverride = null;
   titleCloudSelectedSaveId = saveId || titleCloudSelectedSaveId;
@@ -10773,8 +10967,12 @@ async function openMapFromCloudSave(saveId) {
   titleDemoSaveMenuActive = false;
 }
 
-async function openMapFromDemoSlot(slot) {
+async function openMapFromDemoSlot(slot, { skipTutorialGate = false } = {}) {
   if (!slot?.districtId) return;
+  if (!skipTutorialGate && !hasSeenTutorial()) {
+    runFirstTimeTutorialThen(() => void openMapFromDemoSlot(slot, { skipTutorialGate: true }));
+    return;
+  }
   setDemoSandboxRunActive(true);
   await seedDemoSlotProgress(slot);
   titleDemoSaveOverride = {
@@ -23498,25 +23696,8 @@ function handleTitleScreen() {
         } else if (TITLE_DEMO_SAVE_SLOTS.some((entry) => entry.key === button.key)) {
           const slot = TITLE_DEMO_SAVE_SLOTS.find((entry) => entry.key === button.key);
           if (slot?.districtId) {
-            void (async () => {
-              setDemoSandboxRunActive(true);
-              await seedDemoSlotProgress(slot);
-              titleDemoSaveOverride = {
-                districtId: slot.districtId,
-                campaignData: slot.campaignData || null,
-              };
-              if (typeof window !== "undefined" && window.MapScreen?.selectDistrict) {
-                window.MapScreen.selectDistrict(slot.districtId);
-              }
-              activeDistrictId = slot.districtId;
-              if (typeof window !== "undefined") {
-                window.activeDistrictId = activeDistrictId;
-              }
-              titleScreenActive = false;
-              mapActive = true;
-              if (window.MapScreen?.open) window.MapScreen.open();
-              titleDemoSaveMenuActive = false;
-            })();
+            // First-time players get the tutorial before the map.
+            void openMapFromDemoSlot(slot);
           }
         } else if (button.key === "settings") {
           titleDemoSaveMenuActive = false;
@@ -30807,6 +30988,22 @@ function updateGame(dt) {
   if (isTutorialArenaActive()) {
     // Keep objective HUD pinned every frame in tutorial mode.
     updateTutorialArenaHudState();
+    // Card steps: Space/Enter (or controller A) continues.
+    if (!tutorialArenaState?.pendingStart && tutorialArenaState?.currentObjective?.type === "card") {
+      const continuePressed =
+        keysJustPressed.has(" ") ||
+        keysJustPressed.has("enter") ||
+        keysJustPressed.has("Enter");
+      if (continuePressed) {
+        keysJustPressed.delete(" ");
+        keysJustPressed.delete("enter");
+        keysJustPressed.delete("Enter");
+        stepTutorialArenaObjective(1);
+      }
+      updateTutorialArenaHudState();
+      enforceTutorialArenaVitals();
+      return;
+    }
     if (tutorialArenaState?.pendingStart) {
       const startPressed =
         keysJustPressed.has(" ") ||
@@ -31321,7 +31518,9 @@ function updateGame(dt) {
   updateDevStatus(dt);
   updateAimAssist();
   updateEffects(visualDt);
-  if (!isDevMeleeArenaActive() && !levelManager?.isActive()) {
+  // The tutorial spawns its own waves; the background imp horde would mix in
+  // stray imps and count them toward the tutorial's objectives.
+  if (!isDevMeleeArenaActive() && !isTutorialArenaActive() && !levelManager?.isActive()) {
     maintainMiniImpHorde(levelStatus);
   }
 
@@ -31463,6 +31662,8 @@ function restartGame() {
   pendingTutorialArenaLaunch = false;
   tutorialArenaState = null;
   tutorialArenaReturnSnapshot = null;
+  tutorialArenaExitContinuation = null;
+  tutorialArenaFirstRun = false;
   resetDevMeleeMoveFeed();
   if (typeof window !== "undefined") {
     window.__battlechurchDevMeleeArenaMode = false;

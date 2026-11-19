@@ -523,6 +523,7 @@
     if (window.PlayingInstructions?.state?.open) return true;
     if (window.__battlechurchPauseMenuActive) return true;
     if (window.__missionBriefActive) return true;
+    if (window.__tutorialArenaMenuActive) return true;
     const announcementKey = String(window.__announcementButtons?.key || "").toLowerCase();
     const menuAnnouncementKeys = new Set([
       "title",
@@ -546,6 +547,7 @@
     if (window.PlayingInstructions?.state?.open) return true;
     if (window.__battlechurchPauseMenuActive) return true;
     if (window.__missionBriefActive) return true;
+    if (window.__tutorialArenaMenuActive) return true;
     const announcementKey = String(window.__announcementButtons?.key || "").toLowerCase();
     const backAnnouncementKeys = new Set([
       "title",
