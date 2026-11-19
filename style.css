@@ -391,8 +391,9 @@ body.touch-enabled .button-area.right {
 /* Pause (replaces the old SPACE ring). */
 .touch-pause {
   position: absolute;
-  top: -54px;
-  right: 6px;
+  /* Above the A/B/C buttons (overlay and wide-phone layouts). */
+  right: 20px;
+  bottom: calc(var(--arc-size) + 48px);
   width: 44px;
   height: 44px;
   border-radius: 50%;
@@ -417,6 +418,14 @@ body.touch-enabled .button-area.right {
 
 body.touch-enabled .touch-pause {
   display: flex;
+}
+
+/* Controls below the game (e.g. Galaxy Fold unfolded): top-right of the
+   controls area, clear of the game screen. */
+body.layout-square.touch-enabled .touch-pause,
+body.layout-rotate-warning.touch-enabled .touch-pause {
+  top: 14px;
+  bottom: auto;
 }
 
 /* Bigger buttons where there's room: under the game on square-ish screens
@@ -1889,4 +1898,20 @@ body.layout-rotate-warning .save-dialog__actions .save-dialog__btn-primary {
 #arcControl *,
 body.touch-enabled .joystick-area.left {
   touch-action: none;
+}
+
+/* When the touch controls sit on top of the game (phones in landscape,
+   tablets), only the controls themselves catch touches; taps anywhere else
+   reach the game's on-screen buttons. */
+body.touch-enabled #touchControls,
+body.touch-enabled .touch-row,
+body.touch-enabled .center-controls,
+body.touch-enabled .button-area.right {
+  pointer-events: none;
+}
+
+body.touch-enabled .joystick-area.left,
+body.touch-enabled .touch-pause,
+body.touch-enabled #arcControl .arc-segment {
+  pointer-events: auto;
 }

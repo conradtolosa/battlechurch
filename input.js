@@ -296,17 +296,26 @@
       }
       canvasClickQueued = true;
       canvasClickPos = coords;
+      canvasClickAt = nowTime();
     }
     if (event.button === 2) {
       prayerBombClickQueued = true;
     }
   }
 
+  // Phones send a pointerdown for a tap and then, a moment later, an
+  // emulated mousedown. Counting both made one tap press a button twice
+  // (e.g. "Continue" and then "Next" on the following screen).
+  let lastPointerDownAt = 0;
+
   function handleMouseDown(event) {
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    if (now - lastPointerDownAt < 1000) return; // already handled as a pointer
     handleCanvasClick(event, false);
   }
 
   function handlePointerDown(event) {
+    lastPointerDownAt = typeof performance !== "undefined" ? performance.now() : Date.now();
     handleCanvasClick(event, true);
   }
 
@@ -398,10 +407,15 @@
       baseEl.classList.add("is-active");
     };
 
+    // A quick tap with no drag in the joystick zone is meant for whatever
+    // is on screen there (menu / tutorial buttons), so pass it to the game.
+    let tapStart = null;
+
     const start = (event) => {
       if (!virtualInput.enabled) return;
       if (state.pointerId !== null) return;
       state.pointerId = event.pointerId;
+      tapStart = { x: event.clientX, y: event.clientY, at: nowTime() };
       setBasePosition(event);
       try {
         anchorEl.setPointerCapture(event.pointerId);
@@ -423,6 +437,16 @@
       } catch (e) {}
       reset();
       event.preventDefault();
+      if (
+        controlKey === "movement" &&
+        event.type === "pointerup" &&
+        tapStart &&
+        nowTime() - tapStart.at <= 300 &&
+        Math.hypot(event.clientX - tapStart.x, event.clientY - tapStart.y) <= 14
+      ) {
+        handleCanvasClick({ button: 0, clientX: event.clientX, clientY: event.clientY }, true);
+      }
+      tapStart = null;
     };
 
     anchorEl.addEventListener("pointerdown", start);
@@ -1177,12 +1201,30 @@
     return kind;
   }
 
+  // A tap nobody used within this window is dropped, so a tap made during
+  // gameplay can't press a menu button that appears later.
+  const CANVAS_CLICK_MAX_AGE_MS = 400;
+  let canvasClickAt = 0;
+
+  function nowTime() {
+    return typeof performance !== "undefined" ? performance.now() : Date.now();
+  }
+
+  function expireStaleCanvasClick() {
+    if (canvasClickQueued && nowTime() - canvasClickAt > CANVAS_CLICK_MAX_AGE_MS) {
+      canvasClickQueued = false;
+      canvasClickPos = null;
+    }
+  }
+
   function peekCanvasClick() {
+    expireStaleCanvasClick();
     if (!canvasClickQueued) return null;
     return canvasClickPos;
   }
 
   function consumeCanvasClick() {
+    expireStaleCanvasClick();
     if (!canvasClickQueued) return null;
     canvasClickQueued = false;
     const pos = canvasClickPos;

@@ -5544,7 +5544,7 @@ const TUTORIAL_ARENA_OBJECTIVES = [
     body: "Demons are attacking your town. Your pastor leads the fight, and your congregation fights beside you. First, the basics.",
   },
   { type: "move_wasd", label: "Move with WASD or Xbox Controller" },
-  { type: "kill_any", target: 15, label: "Your pastor fires automatically. Defeat 15 demons" },
+  { type: "kill_any", target: 100, label: "Your pastor fires automatically. Defeat 100 demons" },
   // 2. The point of the game
   {
     type: "card",
@@ -5553,9 +5553,9 @@ const TUTORIAL_ARENA_OBJECTIVES = [
     showButtons: true,
   },
   // 3. One button at a time
-  { type: "kill_with_move", move: "Slash", target: 10, label: "A is your Sword. Slash 10 demons (A)" },
+  { type: "kill_with_move", move: "Slash", target: 100, label: "A is your Sword. Slash 100 demons (A)" },
   { type: "dash_plus_kills", move: "Dash", dashTarget: 3, killTarget: 0, label: "B is your Dash. Dash 3 times (B)" },
-  { type: "kill_with_move", move: "Unity Strike", target: 10, label: "C commands your Congregation. Defeat 10 demons (C)" },
+  { type: "kill_with_move", move: "Unity Strike", target: 100, label: "C commands your Congregation. Defeat 100 demons (C)" },
   // 4. Charging
   {
     type: "card",
@@ -5563,9 +5563,9 @@ const TUTORIAL_ARENA_OBJECTIVES = [
     body: "Hold a button down, then let go, to unleash a much stronger attack.",
     touchBody: "Hold a button until it glows, then let go, to unleash a much stronger attack.",
   },
-  { type: "kill_with_move", move: "Blast", target: 10, label: "Hold A to throw a Blast (Charge A)" },
-  { type: "kill_with_move", move: "Crash", target: 10, label: "Hold B to Crash through demons (Charge B)" },
-  { type: "kill_with_move", move: "Purify", target: 10, label: "Hold C to Purify (Charge C)" },
+  { type: "kill_with_move", move: "Blast", target: 100, label: "Hold A to throw a Blast (Charge A)" },
+  { type: "kill_with_move", move: "Crash", target: 100, label: "Hold B to Crash through demons (Charge B)" },
+  { type: "kill_with_move", move: "Purify", target: 100, label: "Hold C to Purify (Charge C)" },
   // 5. Combos
   {
     type: "card",
@@ -5573,9 +5573,9 @@ const TUTORIAL_ARENA_OBJECTIVES = [
     body: "Press one button, then another, to combo. Combos hit two to three times harder than a single slash, and they're how you beat tough enemies.",
     touchBody: "Slide your thumb from one button to another to combo. Combos hit two to three times harder than a single slash, and they're how you beat tough enemies.",
   },
-  { type: "kill_with_move", move: "Smash", target: 10, label: "Smash: B then A (B -> A)" },
-  { type: "kill_with_move", move: "Cleave", target: 10, label: "Cleave: A then B (A -> B)" },
-  { type: "kill_with_move", move: "Reap", target: 10, label: "Reap: C then A (C -> A)" },
+  { type: "kill_with_move", move: "Smash", target: 100, label: "Smash: B then A (B -> A)" },
+  { type: "kill_with_move", move: "Cleave", target: 100, label: "Cleave: A then B (A -> B)" },
+  { type: "kill_with_move", move: "Reap", target: 100, label: "Reap: C then A (C -> A)" },
   // 6. Why it matters
   {
     type: "card",
@@ -5590,9 +5590,9 @@ const TUTORIAL_ARENA_OBJECTIVES = [
     body: "That's everything you need. Press Continue to practice advanced combos, or Skip to start playing. Every move is listed under Pause > Moves.",
     touchBody: "That's everything you need. Advanced combos: hold a button until it glows, slide onto another and hold until that glows too. Press Continue to practice them, or Skip to start playing.",
   },
-  { type: "kill_with_move", move: "Clash", target: 10, label: "Clash: C then B (C -> B)" },
-  { type: "kill_with_move", move: "Thrash", target: 10, label: "Thrash: hold B, then press A (Charge B + A)" },
-  { type: "kill_with_move", move: "Prayer Storm", target: 10, label: "Prayer Storm: hold A, B and C (Charge A + B + C)" },
+  { type: "kill_with_move", move: "Clash", target: 100, label: "Clash: C then B (C -> B)" },
+  { type: "kill_with_move", move: "Thrash", target: 100, label: "Thrash: hold B, then press A (Charge B + A)" },
+  { type: "kill_with_move", move: "Prayer Storm", target: 100, label: "Prayer Storm: hold A, B and C (Charge A + B + C)" },
 ];
 // The tutorial is forced the first time a player picks a save; this remembers
 // (per browser) that they've seen it so it only happens once.
@@ -5919,6 +5919,13 @@ function updateTutorialArenaHudState() {
   }
   const objective = tutorialArenaState.currentObjective;
   const label = String(objective.label || "");
+  if (tutorialArenaState.completionQueuedAt > 0) {
+    setTutorialArenaHud(
+      { label: "Objective Complete!", progressText: "", moveKey: "" },
+      stepButtons,
+    );
+    return;
+  }
   if (objective.type === "card") {
     const index = Number(tutorialArenaState.objectiveIndex) || 0;
     setTutorialArenaHud(
@@ -6224,11 +6231,8 @@ function startTutorialArenaObjective(index) {
   if (!objective) {
     // All objectives done: show the banner, keep the tutorial buttons up,
     // then return to the screen the player came from (same as Back to Game).
-    queueLevelAnnouncement("Tutorial Complete", "All core moves completed", {
-      duration: 3.0,
-      skipMissionBrief: true,
-      allowDuringSuppression: true,
-    });
+    // The HUD shows "Tutorial Complete / Returning..." (no separate banner,
+    // which overlapped it).
     const now = typeof performance !== "undefined" ? performance.now() : Date.now();
     tutorialArenaState.currentObjective = null;
     tutorialArenaState.completionQueuedAt = 0;
@@ -6261,11 +6265,9 @@ function completeTutorialArenaObjective() {
   tutorialArenaCurrentMoveContext = { move: "", at: 0 };
   clearTutorialArenaMoveKillWindows();
   tutorialArenaState.completionQueuedAt = (typeof performance !== "undefined" ? performance.now() : Date.now()) + 1200;
-  queueLevelAnnouncement("Objective Complete", "", {
-    duration: 1.1,
-    skipMissionBrief: true,
-    allowDuringSuppression: true,
-  });
+  // Shown in place of the objective text (see updateTutorialArenaHudState);
+  // a separate banner drew on top of it.
+  updateTutorialArenaHudState();
 }
 
 function checkTutorialArenaObjectiveComplete() {
