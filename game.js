@@ -5500,6 +5500,9 @@ let tutorialArenaLaunchContext = {
   titleScreenActive: false,
   mapActive: false,
 };
+// Snapshot of whatever screen/game state was live when the tutorial was opened,
+// so "Back to Game" can put the player back exactly where they were.
+let tutorialArenaReturnSnapshot = null;
 const DEV_MELEE_FEED_MAX = 12;
 const DEV_MELEE_COMBO_WINDOW_MS = 1300;
 let devMeleeMoveFeed = [];
@@ -5868,12 +5871,121 @@ function stepTutorialArenaObjective(delta = 1) {
   startTutorialArenaObjective(next);
 }
 
+function getTutorialArenaAudioTracks() {
+  const tracks = Object.values(musicState).filter(
+    (value) => typeof Audio !== "undefined" && value instanceof Audio && value !== musicState.devArena,
+  );
+  [spiritRealmAmbientAudio, battleTeaserCreepyAudio, visitorConversationAmbientAudio].forEach((audio) => {
+    if (audio && !tracks.includes(audio)) tracks.push(audio);
+  });
+  return tracks;
+}
+
+function captureTutorialArenaReturnSnapshot() {
+  const copy = (list) => (Array.isArray(list) ? list.slice() : []);
+  return {
+    titleScreenActive,
+    mapActive,
+    paused,
+    gameOver,
+    gameStarted,
+    npcsSuspended,
+    pendingDistrictIntroStart,
+    suppressInitialAnnouncements,
+    postDeathSequenceActive,
+    postDeathAnimLeadActive,
+    postDeathAnimLeadTimer,
+    battlefieldIntroFadeAlpha,
+    levelManager,
+    activeBoss,
+    congregationWanderBounds,
+    playerGraceCount,
+    powerUpRespawnTimer,
+    powerUpStaggerTimer,
+    pastorPowerupSpawnTimer,
+    churchPowerupEnsureTimer,
+    queuedPowerUpDrops,
+    player: player ? { ...player } : null,
+    formationState: { ...formationState },
+    lists: {
+      enemies: copy(enemies),
+      projectiles: copy(projectiles),
+      bossHazards: copy(bossHazards),
+      npcs: copy(npcs),
+      congregationMembers: copy(congregationMembers),
+      levelAnnouncements: copy(levelAnnouncements),
+      weaponPickups: copy(weaponPickups),
+      churchPowerupPickups: copy(churchPowerupPickups),
+      pastorPowerupPickups: copy(pastorPowerupPickups),
+      utilityPowerUps: copy(utilityPowerUps),
+      gracePickups: copy(gracePickups),
+    },
+    audio: {
+      playing: getTutorialArenaAudioTracks().filter((audio) => !audio.paused),
+      spiritRealmAmbientPlaying,
+      spiritRealmAmbientFadingOut,
+      battleTeaserCreepyPlaying,
+      visitorConversationAmbientPlaying,
+    },
+  };
+}
+
+function restoreTutorialArenaReturnSnapshot(snapshot) {
+  const refill = (target, source) => {
+    target.splice(0, target.length, ...(source || []));
+  };
+  titleScreenActive = snapshot.titleScreenActive;
+  mapActive = snapshot.mapActive;
+  paused = snapshot.paused;
+  gameOver = snapshot.gameOver;
+  gameStarted = snapshot.gameStarted;
+  npcsSuspended = snapshot.npcsSuspended;
+  pendingDistrictIntroStart = snapshot.pendingDistrictIntroStart;
+  suppressInitialAnnouncements = snapshot.suppressInitialAnnouncements;
+  postDeathSequenceActive = snapshot.postDeathSequenceActive;
+  postDeathAnimLeadActive = snapshot.postDeathAnimLeadActive;
+  postDeathAnimLeadTimer = snapshot.postDeathAnimLeadTimer;
+  battlefieldIntroFadeAlpha = snapshot.battlefieldIntroFadeAlpha;
+  levelManager = snapshot.levelManager;
+  activeBoss = snapshot.activeBoss;
+  congregationWanderBounds = snapshot.congregationWanderBounds;
+  playerGraceCount = snapshot.playerGraceCount;
+  powerUpRespawnTimer = snapshot.powerUpRespawnTimer;
+  powerUpStaggerTimer = snapshot.powerUpStaggerTimer;
+  pastorPowerupSpawnTimer = snapshot.pastorPowerupSpawnTimer;
+  churchPowerupEnsureTimer = snapshot.churchPowerupEnsureTimer;
+  queuedPowerUpDrops = snapshot.queuedPowerUpDrops;
+  if (player && snapshot.player) Object.assign(player, snapshot.player);
+  Object.assign(formationState, snapshot.formationState);
+  refill(enemies, snapshot.lists.enemies);
+  refill(projectiles, snapshot.lists.projectiles);
+  refill(bossHazards, snapshot.lists.bossHazards);
+  refill(npcs, snapshot.lists.npcs);
+  refill(congregationMembers, snapshot.lists.congregationMembers);
+  refill(levelAnnouncements, snapshot.lists.levelAnnouncements);
+  refill(weaponPickups, snapshot.lists.weaponPickups);
+  refill(churchPowerupPickups, snapshot.lists.churchPowerupPickups);
+  refill(pastorPowerupPickups, snapshot.lists.pastorPowerupPickups);
+  refill(utilityPowerUps, snapshot.lists.utilityPowerUps);
+  refill(gracePickups, snapshot.lists.gracePickups);
+  if (musicState.devArena) musicState.devArena.pause();
+  spiritRealmAmbientPlaying = snapshot.audio.spiritRealmAmbientPlaying;
+  spiritRealmAmbientFadingOut = snapshot.audio.spiritRealmAmbientFadingOut;
+  battleTeaserCreepyPlaying = snapshot.audio.battleTeaserCreepyPlaying;
+  visitorConversationAmbientPlaying = snapshot.audio.visitorConversationAmbientPlaying;
+  snapshot.audio.playing.forEach((audio) => {
+    try {
+      const result = audio.play();
+      if (result && typeof result.catch === "function") result.catch(() => {});
+    } catch (e) {}
+  });
+}
+
 function exitTutorialArenaToGame() {
-  const returnRoute = String(tutorialArenaReturnRoute || "congregation");
-  const launchStage = String(tutorialArenaLaunchContext?.stage || "");
-  const launchedFromTitle = Boolean(tutorialArenaLaunchContext?.titleScreenActive);
-  const launchedFromMap = Boolean(tutorialArenaLaunchContext?.mapActive);
+  const snapshot = tutorialArenaReturnSnapshot;
+  tutorialArenaReturnSnapshot = null;
   tutorialArenaMode = false;
+  pendingTutorialArenaLaunch = false;
   tutorialArenaState = null;
   tutorialArenaPrayerRefillAt = 0;
   tutorialArenaLastPrayerCharge = null;
@@ -5890,23 +6002,19 @@ function exitTutorialArenaToGame() {
   bossHazards.splice(0, bossHazards.length);
   clearAllPowerUps();
   clearGracePickups();
-  if (returnRoute === "title" || launchedFromTitle || launchedFromMap) {
-    if (typeof window !== "undefined" && typeof window.returnToTitleScreen === "function") {
-      window.returnToTitleScreen();
-      return;
-    }
-    restartGame();
+  if (snapshot) {
+    // Put back the exact screen the player came from (title, congregation,
+    // pause menu, mid-battle...).
+    restoreTutorialArenaReturnSnapshot(snapshot);
     return;
   }
-  if (returnRoute === "congregation" || launchStage === "levelIntro" || launchStage === "congregationToTeaser") {
+  // No snapshot (e.g. opened from the map or before the pastor existed):
+  // the previous game state is gone, so fall back to the title screen.
+  if (typeof window !== "undefined" && typeof window.returnToTitleScreen === "function") {
+    window.returnToTitleScreen();
     return;
   }
-  const stage = levelManager?.getStatus?.()?.stage || "";
-  if (stage === "levelIntro" && typeof levelManager?.advanceFromCongregation === "function") {
-    levelManager.advanceFromCongregation();
-  } else if (stage === "briefing" && typeof levelManager?.advanceFromBriefing === "function") {
-    levelManager.advanceFromBriefing();
-  }
+  restartGame();
 }
 
 function handleTutorialArenaButtons() {
@@ -6775,6 +6883,9 @@ function requestDevMeleeArenaLaunch() {
 
 function activateTutorialArenaMode() {
   tutorialArenaMode = true;
+  // Clear the launch request; leaving it set made the tutorial relaunch
+  // itself the frame after "Back to Game".
+  pendingTutorialArenaLaunch = false;
   devMeleeArenaMode = false;
   resetDevMeleeMoveFeed();
   if (typeof window !== "undefined") {
@@ -6789,7 +6900,13 @@ function activateTutorialArenaMode() {
   pendingDistrictIntroStart = false;
   suppressInitialAnnouncements = false;
   if (Array.isArray(levelAnnouncements)) levelAnnouncements.length = 0;
-  if (levelManager?.reset) levelManager.reset();
+  if (tutorialArenaReturnSnapshot) {
+    // Park the real level manager in the snapshot and give the tutorial an
+    // idle one, so the player's progress survives the tutorial.
+    levelManager = Levels.createLevelManager();
+  } else if (levelManager?.reset) {
+    levelManager.reset();
+  }
   clearCongregationMembers();
   clearCongregationSpeechBubbles();
   npcsSuspended = false;
@@ -6845,6 +6962,9 @@ function requestTutorialArenaLaunch(source = "auto") {
   if (now < tutorialArenaLaunchLockUntil) return;
   tutorialArenaLaunchLockUntil = now + 300;
   if (isTutorialArenaActive()) return;
+  // Remember where we came from. Only possible when the pastor already exists
+  // and we're not on the map (those paths have to start a fresh run).
+  tutorialArenaReturnSnapshot = player && !mapActive ? captureTutorialArenaReturnSnapshot() : null;
   tutorialArenaLaunchContext = {
     stage: String(levelManager?.getStatus?.()?.stage || ""),
     titleScreenActive: Boolean(titleScreenActive),
@@ -31316,6 +31436,7 @@ function restartGame() {
   pendingDevMeleeArenaLaunch = false;
   pendingTutorialArenaLaunch = false;
   tutorialArenaState = null;
+  tutorialArenaReturnSnapshot = null;
   resetDevMeleeMoveFeed();
   if (typeof window !== "undefined") {
     window.__battlechurchDevMeleeArenaMode = false;
