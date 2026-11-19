@@ -831,6 +831,8 @@
   // A touch waits this long before counting as a hold, so a tap or a quick
   // slide can be sent to the game as a clean, fast key sequence.
   const ABC_INTENT_MS = 200;
+  // Thumb movement (px) that counts as sliding rather than resting.
+  const ABC_SLIDE_MOVE_PX = 3;
   // Fast slide: gap between the first and second button going down.
   const ABC_FAST_SEQUENCE_GAP_MS = 60;
   // Length of a tap.
@@ -1062,27 +1064,6 @@
       }, ABC_SLIDE_OVERLAP_MS);
     };
 
-    // A -> C / B -> C slide sent as C -> A (Reap) / C -> B (Clash): C goes
-    // down, then the other button while C is still down, then both come up
-    // as quick taps (nothing is left held, so nothing charges by accident).
-    const sendReorderedCSlide = (state, other) => {
-      pressSeg("C");
-      if (other === "B") queueComboSwipe("C", "B");
-      refresh();
-      setTimeout(() => {
-        pressSeg(other);
-        refresh();
-        setTimeout(() => {
-          releaseSeg("C");
-          refresh();
-        }, ABC_SLIDE_OVERLAP_MS);
-        setTimeout(() => {
-          releaseSeg(other);
-          refresh();
-        }, ABC_SLIDE_OVERLAP_MS + ABC_TAP_MS);
-      }, ABC_FAST_SEQUENCE_GAP_MS);
-    };
-
     // Finger has rested on the button: it's a hold, press it for real.
     const commitPending = (state) => {
       if (!state.pending || state.ended) return;
@@ -1147,7 +1128,15 @@
       }
       // Don't tell the game yet: wait briefly to see if this is a tap, a
       // hold or the start of a slide combo.
-      const state = { seg, held: new Set(), pressedAt: {}, pending: seg, ended: false };
+      const state = {
+        seg,
+        held: new Set(),
+        pressedAt: {},
+        pending: seg,
+        ended: false,
+        lastX: event.clientX,
+        lastY: event.clientY,
+      };
       state.pendingTimer = setTimeout(() => commitPending(state), ABC_INTENT_MS);
       pointers.set(event.pointerId, state);
       refresh();
@@ -1160,19 +1149,53 @@
       if (!state) return;
       event.preventDefault();
       if (state.both) return; // two-button press: stay on both until lifted
+      // A moving thumb is sliding, not holding: only count the hold time while
+      // the thumb rests still, so a slower slide (e.g. A -> C through the A+C
+      // slice) still comes out as a combo instead of "A, then C".
+      if (state.pending) {
+        const moved = Math.hypot(event.clientX - state.lastX, event.clientY - state.lastY);
+        if (moved >= ABC_SLIDE_MOVE_PX) {
+          state.lastX = event.clientX;
+          state.lastY = event.clientY;
+          clearTimeout(state.pendingTimer);
+          state.pendingTimer = setTimeout(() => commitPending(state), ABC_INTENT_MS);
+        }
+      }
       const seg = getSegmentAt(event.clientX, event.clientY);
       // Off the buttons: keep holding whatever we're on (sticky).
       if (!seg || seg === state.seg) return;
       const prev = state.seg;
       state.seg = seg;
 
-      if (state.pending && seg === "C" && (prev === "A" || prev === "B")) {
-        // Quick slide A -> C or B -> C. The game only knows C -> A (Reap) and
-        // C -> B (Clash), and nothing has been sent yet, so send it in that
-        // order: direction doesn't matter for slides with C.
+      // A -> C and B -> C aren't moves in the game (only C -> A Reap and
+      // C -> B Clash are). Sliding onto C from A or B just does the A / B
+      // move; landing on C does NOT also press C (no stray Unity Strike).
+      // Charged A/B sliding onto C still makes Hedge / Trash (below).
+      const toCFromAB = seg === "C" && (prev === "A" || prev === "B");
+      if (toCFromAB && state.pending) {
         state.pending = null;
         clearTimeout(state.pendingTimer);
-        sendReorderedCSlide(state, prev);
+        state.cSuppressed = true;
+        tapSeg(prev);
+        return;
+      }
+      if (toCFromAB && !(state.held.has(prev) && isCharged(prev, state.pressedAt[prev]))) {
+        state.cSuppressed = true;
+        if (state.held.has(prev)) {
+          state.held.delete(prev);
+          releaseSeg(prev);
+          refresh();
+        }
+        return;
+      }
+      if (state.cSuppressed && prev === "C") {
+        // Slid on from the "dead" C: start fresh on the new button.
+        state.cSuppressed = false;
+        state.pending = seg;
+        state.lastX = event.clientX;
+        state.lastY = event.clientY;
+        clearTimeout(state.pendingTimer);
+        state.pendingTimer = setTimeout(() => commitPending(state), ABC_INTENT_MS);
         return;
       }
 
