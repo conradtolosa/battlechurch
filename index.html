@@ -46,28 +46,30 @@
         <div class="center-controls"></div>
         <div class="button-area right">
           <svg id="arcControl" viewBox="0 0 260 260" role="group" aria-label="Action Buttons">
-            <!-- One round pad split into three wedges: every pair of buttons shares
-                 a long edge (thumb on the stripe = press both) and all three meet
-                 in the middle (center dot = press all three). Geometry must match
-                 ABC_PAD_* in input.js. -->
+            <!-- Six slices like a D-pad with diagonals: A, B, C plus a smaller
+                 "both" slice between each pair (A+B, A+C, B+C); the center dot
+                 holds all three. Angles must match ABC_PAD_* in input.js. -->
             <g class="abc-btn" data-seg="C">
-              <path class="arc-segment arc-c" data-seg="C" d="M 130 130 L 24.34 69.0 A 122 122 0 0 1 235.66 69.0 Z" />
-              <text class="arc-label" data-seg="C" x="130.0" y="51.24">C</text>
-              <text class="abc-sub" data-seg="C" x="130.0" y="83.24">PRAY</text>
+              <path class="arc-segment arc-c" data-seg="C" d="M 130 130 L 51.58 36.54 A 122 122 0 0 1 208.42 36.54 Z" />
+              <text class="arc-label" data-seg="C" x="130.0" y="48.8">C</text>
+              <text class="abc-sub" data-seg="C" x="130.0" y="80.8">PRAY</text>
             </g>
             <g class="abc-btn" data-seg="A">
-              <path class="arc-segment arc-a" data-seg="A" d="M 130 130 L 235.66 69.0 A 122 122 0 0 1 130.0 252.0 Z" />
-              <text class="arc-label" data-seg="A" x="191.28" y="157.38">A</text>
-              <text class="abc-sub" data-seg="A" x="191.28" y="189.38">SWORD</text>
+              <path class="arc-segment arc-a" data-seg="A" d="M 130 130 L 250.15 108.81 A 122 122 0 0 1 171.73 244.64 Z" />
+              <text class="arc-label" data-seg="A" x="193.39" y="158.6">A</text>
+              <text class="abc-sub" data-seg="A" x="193.39" y="190.6">SWORD</text>
             </g>
             <g class="abc-btn" data-seg="B">
-              <path class="arc-segment arc-b" data-seg="B" d="M 130 130 L 130.0 252.0 A 122 122 0 0 1 24.34 69.0 Z" />
-              <text class="arc-label" data-seg="B" x="68.72" y="157.38">B</text>
-              <text class="abc-sub" data-seg="B" x="68.72" y="189.38">DASH</text>
+              <path class="arc-segment arc-b" data-seg="B" d="M 130 130 L 88.27 244.64 A 122 122 0 0 1 9.85 108.81 Z" />
+              <text class="arc-label" data-seg="B" x="66.61" y="158.6">B</text>
+              <text class="abc-sub" data-seg="B" x="66.61" y="190.6">DASH</text>
             </g>
-            <line class="abc-seam" x1="130" y1="130" x2="235.66" y2="69.0" />
-            <line class="abc-seam" x1="130" y1="130" x2="130.0" y2="252.0" />
-            <line class="abc-seam" x1="130" y1="130" x2="24.34" y2="69.0" />
+            <path class="abc-diag abc-diag-ac" data-combo="AC" d="M 130 130 L 208.42 36.54 A 122 122 0 0 1 250.15 108.81 Z" />
+            <text class="abc-diag-label" data-combo="AC" x="206.07" y="86.08">A+C</text>
+            <path class="abc-diag abc-diag-ab" data-combo="AB" d="M 130 130 L 171.73 244.64 A 122 122 0 0 1 88.27 244.64 Z" />
+            <text class="abc-diag-label" data-combo="AB" x="130.0" y="217.84">A+B</text>
+            <path class="abc-diag abc-diag-bc" data-combo="BC" d="M 130 130 L 9.85 108.81 A 122 122 0 0 1 51.58 36.54 Z" />
+            <text class="abc-diag-label" data-combo="BC" x="53.93" y="86.08">B+C</text>
             <circle class="arc-junction" data-seg="ABC" cx="130" cy="130" r="22" />
           </svg>
         </div>

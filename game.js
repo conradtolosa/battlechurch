@@ -5607,11 +5607,11 @@ const TUTORIAL_ARENA_OBJECTIVES = [
     type: "card",
     label: "Charge two at once",
     body: "Advanced moves charge two buttons together. Hold BOTH buttons down until BOTH charge meters are full, then let go. These are optional: press Continue to practice them, or Skip to start playing.",
-    touchBody: "Advanced moves charge two buttons together. Put your thumb on the light stripe between two buttons to hold both (or use two fingers), and hold until both say READY. Then let go. The dot in the middle holds all three. These are optional: Continue to practice, or Skip to start playing.",
+    touchBody: "Advanced moves charge two buttons together. Press the small slice between two buttons (A+B, A+C or B+C) to hold both, like a diagonal on a D-pad, and hold until both say READY. Then let go. The dot in the middle holds all three. These are optional: Continue to practice, or Skip to start playing.",
   },
-  { type: "kill_with_move", move: "Thrash", target: 100, label: "Thrash: charge B and A together (Charge B + A)" },
-  { type: "kill_with_move", move: "Hedge", target: 100, label: "Hedge: charge A and C together (Charge A + C)" },
-  { type: "kill_with_move", move: "Trash", target: 100, label: "Trash: charge B, then hold C too (Charge B + C)" },
+  { type: "kill_with_move", move: "Thrash", target: 100, label: "Thrash: charge B and A together (Charge B + A)", touchLabel: "Thrash: hold the A+B slice until both are READY (Charge B + A)" },
+  { type: "kill_with_move", move: "Hedge", target: 100, label: "Hedge: charge A and C together (Charge A + C)", touchLabel: "Hedge: hold the A+C slice until both are READY (Charge A + C)" },
+  { type: "kill_with_move", move: "Trash", target: 100, label: "Trash: charge B, then hold C too (Charge B + C)", touchLabel: "Trash: hold the B+C slice until B is READY (Charge B + C)" },
   { type: "kill_with_move", move: "Prayer Storm", target: 100, label: "Prayer Storm: charge A, B and C together (Charge A + B + C)", touchLabel: "Prayer Storm: hold the center dot until all three are READY (Charge A + B + C)" },
   // 8. Combo strings (no congregation: just you and a practice dummy that
   //    walks, swings and can't be defeated)

@@ -729,20 +729,20 @@
   // Every finger is tracked separately, so two-thumb play works too.
   const ABC_CHARGE_FALLBACK_MS = { A: 1500, B: 1500, C: 1000 };
   const ABC_HIT_RADIUS_SCALE = 1.3;
-  // Three-wedge pad geometry (must match the SVG in index.html). Angles are
-  // degrees, 0 = right, 90 = down.
+  // Six-slice pad geometry (must match the SVG in index.html), like a D-pad
+  // with diagonals. Angles are degrees, 0 = right, 90 = down; anything below
+  // -130 is shifted by +360 so B and B+C stay continuous.
   const ABC_PAD_CX = 130;
   const ABC_PAD_CY = 130;
   const ABC_PAD_R = 122;
-  const ABC_PAD_WEDGES = { C: [-150, -30], A: [-30, 90], B: [90, 210] };
-  const ABC_PAD_EDGES = [
-    { deg: -30, segs: ["C", "A"] },
-    { deg: 90, segs: ["A", "B"] },
-    { deg: 210, segs: ["B", "C"] },
-  ];
-  // Thumb within this distance of an edge = press both; within this radius
-  // of the center = press all three.
-  const ABC_PAD_SEAM_HALF = 15;
+  const ABC_PAD_WEDGES = { C: [-130, -50], A: [-10, 70], B: [110, 190] };
+  // "Both" slices between each pair of buttons.
+  const ABC_PAD_DIAGONALS = {
+    AC: { range: [-50, -10], segs: ["A", "C"] },
+    AB: { range: [70, 110], segs: ["A", "B"] },
+    BC: { range: [190, 230], segs: ["B", "C"] },
+  };
+  // Within this radius of the center = press all three.
   const ABC_PAD_CENTER_R = 24;
   // On a slide, how long both buttons are held together before the first
   // one is released.
@@ -760,6 +760,8 @@
     const circleEls = Array.from(arcEl.querySelectorAll(".arc-segment[data-seg]"));
     if (!circleEls.length) return;
     const labelEls = Array.from(arcEl.querySelectorAll(".arc-label[data-seg]"));
+    const diagEls = Array.from(arcEl.querySelectorAll(".abc-diag[data-combo]"));
+    const junctionEl = arcEl.querySelector(".arc-junction");
     // Charge ring around each button + its small caption (SWORD / DASH /
     // PRAY), which switches to CHARGING / READY while held.
     const SVG_NS = "http://www.w3.org/2000/svg";
@@ -861,6 +863,12 @@
       labelEls.forEach((el) => {
         el.classList.toggle("is-active", holdCounts[el.dataset.seg] > 0);
       });
+      const activeCombos = new Set();
+      pointers.forEach((state) => {
+        if (state.both) activeCombos.add(Array.from(state.held).sort().join(""));
+      });
+      diagEls.forEach((el) => el.classList.toggle("is-active", activeCombos.has(el.dataset.combo)));
+      if (junctionEl) junctionEl.classList.toggle("is-active", activeCombos.has("ABC"));
     };
 
     // While any finger is down, keep the "charged" glow in sync with the game.
@@ -905,33 +913,32 @@
       const dx = pt.x - ABC_PAD_CX;
       const dy = pt.y - ABC_PAD_CY;
       let deg = (Math.atan2(dy, dx) * 180) / Math.PI; // -180..180, 0 = right, 90 = down
-      if (deg < -150) deg += 360; // keep B's wedge (90..210) continuous
+      if (deg < -130) deg += 360; // keep B (110..190) and B+C (190..230) continuous
       return { r: Math.hypot(dx, dy), deg };
     };
+    const inRange = (deg, [lo, hi]) => deg >= lo && deg < hi;
+    // Main button (A/B/C) at this angle, or null on a diagonal slice.
     const wedgeForAngle = (deg) => {
-      if (deg >= -150 && deg < -30) return "C";
-      if (deg >= -30 && deg < 90) return "A";
-      return "B";
+      for (const seg of Object.keys(ABC_PAD_WEDGES)) {
+        if (inRange(deg, ABC_PAD_WEDGES[seg])) return seg;
+      }
+      return null;
     };
-    // Perpendicular distance from the point to each wedge edge (a ray from
-    // the center); returns the nearest edge and that distance.
-    const nearestEdge = (pad) => {
-      let best = null;
-      ABC_PAD_EDGES.forEach((edge) => {
-        let diff = Math.abs(pad.deg - edge.deg) % 360;
-        if (diff > 180) diff = 360 - diff;
-        if (diff >= 90) return;
-        const dist = pad.r * Math.sin((diff * Math.PI) / 180);
-        if (!best || dist < best.dist) best = { edge, dist };
-      });
-      return best;
+    // Diagonal ("both") slice at this angle, or null.
+    const diagonalForAngle = (deg) => {
+      for (const key of Object.keys(ABC_PAD_DIAGONALS)) {
+        if (inRange(deg, ABC_PAD_DIAGONALS[key].range)) return key;
+      }
+      return null;
     };
 
-    // The single button under a point (null off the pad). Used for slides,
-    // so points on an edge stripe count as "not decided yet" (sticky).
+    // The main button under a point. Off the pad, on the center dot or on a
+    // diagonal slice this is null: during a slide (B -> A passes through
+    // A+B) those count as "on the way", so the slide still makes a combo.
     const getSegmentAt = (clientX, clientY) => {
       const pad = toPad(clientX, clientY);
       if (!pad || pad.r > ABC_PAD_R * ABC_HIT_RADIUS_SCALE) return null;
+      if (pad.r <= ABC_PAD_CENTER_R) return null;
       return wedgeForAngle(pad.deg);
     };
 
@@ -984,15 +991,15 @@
       refresh();
     };
 
-    // A thumb on the stripe between two buttons presses BOTH; in the middle,
-    // all three. Returns the buttons, or null for a single button.
+    // Where the thumb first lands: a diagonal slice presses BOTH of its
+    // buttons, the center presses all three. Returns the buttons, or null
+    // for a single main button.
     const getSeamPairAt = (clientX, clientY) => {
       const pad = toPad(clientX, clientY);
       if (!pad || pad.r > ABC_PAD_R * ABC_HIT_RADIUS_SCALE) return null;
       if (pad.r <= ABC_PAD_CENTER_R) return ["A", "B", "C"];
-      const near = nearestEdge(pad);
-      if (near && near.dist <= ABC_PAD_SEAM_HALF) return near.edge.segs.slice();
-      return null;
+      const diag = diagonalForAngle(pad.deg);
+      return diag ? ABC_PAD_DIAGONALS[diag].segs.slice() : null;
     };
 
     // For tests/debugging: a screen point for "A", "A+B", "ABC", etc.
@@ -1004,10 +1011,10 @@
       if (name === "ABC") {
         r = 0;
       } else if (name.includes("+")) {
-        const key = name.split("+").sort().join("+");
-        const edge = ABC_PAD_EDGES.find((e) => e.segs.slice().sort().join("+") === key);
-        deg = edge ? edge.deg : 0;
-        r = ABC_PAD_R * 0.55;
+        const key = name.split("+").sort().join("");
+        const diag = ABC_PAD_DIAGONALS[key];
+        deg = diag ? (diag.range[0] + diag.range[1]) / 2 : 0;
+        r = ABC_PAD_R * 0.62;
       } else {
         const [a0, a1] = ABC_PAD_WEDGES[name];
         deg = (a0 + a1) / 2;
@@ -1019,13 +1026,13 @@
 
     const start = (event) => {
       if (!virtualInput.enabled) return;
-      const seg = getSegmentAt(event.clientX, event.clientY);
+      const onJunction = Boolean(event.target?.classList?.contains("arc-junction"));
+      const seam = onJunction ? ["A", "B", "C"] : getSeamPairAt(event.clientX, event.clientY);
+      const seg = seam ? seam[0] : getSegmentAt(event.clientX, event.clientY);
       if (!seg) return;
       try {
         arcEl.setPointerCapture(event.pointerId);
       } catch (e) {}
-      const onJunction = Boolean(event.target?.classList?.contains("arc-junction"));
-      const seam = onJunction ? ["A", "B", "C"] : getSeamPairAt(event.clientX, event.clientY);
       if (seam) {
         // Both buttons go down together and stay held (charge both).
         const both = { seg: seam[0], held: new Set(), pressedAt: {}, pending: null, ended: false, both: true };
