@@ -26857,13 +26857,21 @@ function recordTutorialArenaComboMove(moveName) {
   // Pressing B right after an A attack already cancels into Smash, so the A
   // of a "B then A" slide lands as an extra Slash just after it. Ignore that
   // echo instead of breaking the string.
+  // Only a Smash that cancelled out of a Slash has that echo, and only once,
+  // so a real Slash after a plain B -> A Smash still counts.
   if (
     moveName === "Slash" &&
+    tutorialArenaState.comboEchoArmed &&
     tutorialArenaState.comboLastMove === "Smash" &&
     now - (Number(tutorialArenaState.comboLastAt) || 0) < 450
   ) {
+    tutorialArenaState.comboEchoArmed = false;
     return;
   }
+  tutorialArenaState.comboEchoArmed =
+    moveName === "Smash" &&
+    tutorialArenaState.comboLastMove === "Slash" &&
+    now - (Number(tutorialArenaState.comboLastAt) || 0) < 800;
   tutorialArenaState.comboLastMove = moveName;
   let step = Number(tutorialArenaState.comboStep) || 0;
   if (step > 0 && now - (Number(tutorialArenaState.comboLastAt) || 0) > TUTORIAL_ARENA_COMBO_STRING_GAP_MS) {

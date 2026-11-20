@@ -62,7 +62,7 @@ dev/tests/run.sh touch_moves.js phone --slow --only=Reap
   if nothing is on that port. `BASE_URL=https://<preview>/ dev/tests/run.sh smoke`
   tests a deployed preview.
 - Files: `helpers.js` (open game, jump to a tutorial step, pad gestures, move
-  log), `touch_moves.js`, `tutorial_flow.js`, `stick_trail.js`, `smoke.js`.
+  log), `touch_moves.js`, `tutorial_flow.js`, `combo_strings.js`, `stick_trail.js`, `smoke.js`.
 - The test box runs ~17 fps, so timing checks can flake. Re-run a single miss
   with `--only=` before believing it. Moves are confirmed by
   `window.__moveAnnouncementBanner` (the on-screen move banner).

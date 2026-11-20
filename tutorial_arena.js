@@ -160,7 +160,24 @@ const TUTORIAL_ARENA_OBJECTIVES = [
     type: "card",
     arena: "dummy",
     label: "Combo strings",
-    body: "Like combos in fighting games such as Street Fighter or Mortal Kombat, you can string moves together. Each hit within a moment of the last builds a Hit Chain, and every 4th hit knocks the enemy down. Start with A: it needs no meter. Then use moves that do. Practice on the armored dummy: it can't be defeated.",
+    body: "Like combos in fighting games such as Street Fighter or Mortal Kombat, you can string moves together. Each hit within a moment of the last builds a Hit Chain, and every 4th hit knocks the enemy down. Start easy: Smash (B \u2192 A) dashes you in, then A finishes. Practice on the armored dummy: it can't be defeated.",
+  },
+  {
+    type: "combo_string",
+    arena: "dummy",
+    sequence: ["Smash", "Slash"],
+    inputs: "B \u2192 A,  A",
+    target: 3,
+    label: "Combo string: Smash, Slash. Get close to the dummy first",
+    touchLabel: "Combo string: Smash, Slash. Get close first",
+  },
+  {
+    type: "combo_string",
+    arena: "dummy",
+    sequence: ["Slash", "Smash", "Slash"],
+    inputs: "A,  B \u2192 A,  A",
+    target: 3,
+    label: "Combo string: Slash, Smash, Slash",
   },
   {
     type: "combo_string",
@@ -190,7 +207,7 @@ const TUTORIAL_ARENA_OBJECTIVES = [
     type: "card",
     arena: "dummy",
     label: "Combos to try",
-    body: "Slash, Smash, Reap (A,  B \u2192 A,  C \u2192 A).   Slash, Reap, Smash (A,  C \u2192 A,  B \u2192 A).   Blast, Smash, Reap (charge A,  B \u2192 A,  C \u2192 A).",
+    body: "Smash, Slash (B \u2192 A,  A).   Slash, Smash, Slash (A,  B \u2192 A,  A).   Slash, Smash, Reap (A,  B \u2192 A,  C \u2192 A).   Slash, Reap, Smash (A,  C \u2192 A,  B \u2192 A).   Blast, Smash, Reap (charge A,  B \u2192 A,  C \u2192 A).",
   },
   // 9. Counter Hits and Punish Counters
   {

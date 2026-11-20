@@ -33,6 +33,7 @@ case "${1:-all}" in
     run touch_moves.js fold
     run touch_moves.js fold --keyboard
     run tutorial_flow.js
+    run combo_strings.js
     run stick_trail.js
     ;;
   *) run "$@" ;;
