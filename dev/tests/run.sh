@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Run the browser tests against a local server.
-#   dev/tests/run.sh                 # smoke + all tests
-#   dev/tests/run.sh smoke           # quick: page loads, no errors
+# Run the browser tests against a local server. Prints only failures and a
+# one-line summary per file (VERBOSE=1 prints every check).
+#   dev/tests/run.sh                 # load-order check + smoke + all tests
+#   dev/tests/run.sh smoke           # quick: load-order check, page loads, no errors
 #   dev/tests/run.sh touch_moves.js phone --slow
 # Uses BASE_URL if set (e.g. a Pages preview), else starts python's http.server
 # on port 8765 from the repo root and stops it afterwards.
@@ -24,11 +25,13 @@ cleanup() { [ -n "$SERVER_PID" ] && kill "$SERVER_PID" 2>/dev/null; }
 trap cleanup EXIT
 
 status=0
-run() { echo; echo "=== $*"; node "dev/tests/$@" || status=1; }
+run() { echo "=== $*"; node "dev/tests/$@" || status=1; }
+loadcheck() { echo "=== load order"; node dev/tools/check_load_order.js || status=1; }
 
 case "${1:-all}" in
-  smoke) run smoke.js ;;
+  smoke) loadcheck; run smoke.js ;;
   all)
+    loadcheck
     run smoke.js
     run touch_moves.js fold
     run touch_moves.js fold --keyboard
@@ -38,6 +41,5 @@ case "${1:-all}" in
     ;;
   *) run "$@" ;;
 esac
-echo
 [ $status -eq 0 ] && echo "ALL TEST FILES PASSED" || echo "SOME TESTS FAILED"
 exit $status

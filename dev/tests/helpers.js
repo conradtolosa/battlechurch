@@ -18,15 +18,19 @@ const VIEWPORTS = {
 };
 
 let failures = 0;
+let passes = 0;
+// Only failures are printed (keeps output short for AI tools). VERBOSE=1
+// prints every check.
+const VERBOSE = Boolean(process.env.VERBOSE);
 
 function check(name, ok, detail = "") {
-  if (!ok) failures += 1;
-  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? `  (${detail})` : ""}`);
+  if (ok) passes += 1; else failures += 1;
+  if (!ok || VERBOSE) console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? `  (${detail})` : ""}`);
   return ok;
 }
 
 function finish() {
-  console.log(failures ? `\n${failures} check(s) failed` : "\nall checks passed");
+  console.log(failures ? `${failures} check(s) failed, ${passes} passed` : `all ${passes} checks passed`);
   process.exit(failures ? 1 : 0);
 }
 

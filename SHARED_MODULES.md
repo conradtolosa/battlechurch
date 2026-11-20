@@ -14,6 +14,6 @@ This repository now keeps every large, reusable data table in its own module. Ea
 | `asset_manifest.js` | `BattlechurchAssetManifest.build` | Helper that composes the player/projectile/enemy asset manifest. | `game.js` asset loading |
 | `hud.js` | `BattlechurchHUD.draw` | HUD drawing helper that renders HP, prayer meter, and score board. | `renderer.js` draw path |
 | `level_data.js` | `BattlechurchLevelData` | Level narrative tables (horde pools, mission lines, boss themes). | `levels.js` progression |
-| `ui_texts.js` | `BattlechurchUIText` | Dialog copy for title/how-to/pause/game over screens. | `game.js` dialogs |
+| `config_text.js` | `BattlechurchUIText` | Dialog copy for title/how-to/pause/game over screens. | `game.js` dialogs |
 
 Keep this file updated whenever you add or remove a `Battlechurch*` module so future contributors know exactly which file owns each shared resource.
