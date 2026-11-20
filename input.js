@@ -836,6 +836,8 @@
   // A touch waits this long before counting as a hold, so a tap or a quick
   // slide can be sent to the game as a clean, fast key sequence.
   const ABC_INTENT_MS = 200;
+  // Minimum time a pressed button stays lit (so quick taps are visible).
+  const ABC_PRESS_FLASH_MS = 220;
   // Swipe trail: how long after reaching the second button to check whether
   // it made a combo, and how long the trail takes to fade out.
   const ABC_TRAIL_JUDGE_MS = 350;
@@ -858,6 +860,10 @@
     // PRAY), which switches to CHARGING / READY while held.
     const SVG_NS = "http://www.w3.org/2000/svg";
     const rings = {};
+    const halos = {};
+    // Taps are only pressed for a split second; keep the flash on at least
+    // this long so it's visible.
+    const flashUntil = { A: 0, B: 0, C: 0 };
     const subLabels = {};
     // Arc along a button's outer edge. Normally it fills clockwise; with
     // reverse it starts at the other end and fills counter-clockwise.
@@ -903,6 +909,14 @@
       // Recharge meter (cooldowns, e.g. B after a Dash); driven by game.js.
       const cooldownRing = makeRimArc(seg, "abc-cooldown-ring");
       el.parentNode.insertBefore(cooldownRing, ring);
+      // Press glow: lights up the button's outer edge (which the thumb
+      // doesn't cover) while it's pressed, so presses are obvious.
+      const halo = document.createElementNS(SVG_NS, "path");
+      halo.setAttribute("d", rimArcPath(seg, ABC_PAD_R + 4));
+      halo.setAttribute("class", "abc-press-halo");
+      halo.setAttribute("data-seg", seg);
+      el.parentNode.insertBefore(halo, cooldownRing);
+      halos[seg] = halo;
       const sub = arcEl.querySelector(`.abc-sub[data-seg="${seg}"]`);
       if (sub) {
         subLabels[seg] = { el: sub, text: sub.textContent };
@@ -1040,6 +1054,18 @@
       return Math.min(1, (nowMs() - pressedAt) / (ABC_CHARGE_FALLBACK_MS[seg] || 1500));
     };
 
+    // Bright pop on every press (taps included); refresh again when it ends.
+    const flashSeg = (seg) => {
+      flashUntil[seg] = nowMs() + ABC_PRESS_FLASH_MS;
+      const el = circleEls.find((c) => c.dataset.seg === seg);
+      if (el) {
+        el.classList.remove("is-pop");
+        void el.getBBox(); // restart the pop animation
+        el.classList.add("is-pop");
+      }
+      setTimeout(() => refresh(), ABC_PRESS_FLASH_MS + 10);
+    };
+
     const refresh = () => {
       const charged = { A: false, B: false, C: false };
       const progress = { A: 0, B: 0, C: 0 };
@@ -1078,10 +1104,13 @@
       pointers.forEach((state) => {
         if (state.pending) touched[state.pending] = true;
       });
+      const flashNow = nowMs();
       circleEls.forEach((el) => {
         const seg = el.dataset.seg;
-        el.classList.toggle("is-active", holdCounts[seg] > 0 || touched[seg]);
+        const lit = holdCounts[seg] > 0 || touched[seg] || flashUntil[seg] > flashNow;
+        el.classList.toggle("is-active", lit);
         el.classList.toggle("is-charged", holdCounts[seg] > 0 && charged[seg]);
+        if (halos[seg]) halos[seg].classList.toggle("is-on", lit);
       });
       labelEls.forEach((el) => {
         el.classList.toggle("is-active", holdCounts[el.dataset.seg] > 0);
@@ -1110,6 +1139,7 @@
     const pressSeg = (seg) => {
       const cfg = segmentMap[seg];
       if (!cfg) return;
+      flashSeg(seg);
       holdCounts[seg] += 1;
       if (holdCounts[seg] > 1) return;
       const upgradeSelect =
