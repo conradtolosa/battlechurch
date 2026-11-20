@@ -15701,9 +15701,36 @@ function drawChurchUpgradeScreen(ctx, canvas, options = {}) {
       ctx.strokeStyle = "rgba(0,0,0,0.86)";
       ctx.fillStyle = colors.gold || "#DDA677";
       ctx.lineWidth = 6;
-      ctx.font = `800 ${titleSize}px ${UI_FONT_FAMILY || "sans-serif"}`;
+      // Keep the text between the touch stick and pad (they cover the sides).
+      const tutorialTextMaxW = canvas.width * (touchTextLift ? 0.66 : 0.92);
+      let titleFontSize = titleSize;
+      ctx.font = `800 ${titleFontSize}px ${UI_FONT_FAMILY || "sans-serif"}`;
+      while (titleFontSize > 18 && ctx.measureText(titleLabel || tutorialLabel).width > tutorialTextMaxW) {
+        titleFontSize -= 1;
+        ctx.font = `800 ${titleFontSize}px ${UI_FONT_FAMILY || "sans-serif"}`;
+      }
       ctx.strokeText(titleLabel || tutorialLabel, canvas.width / 2, baseY);
       ctx.fillText(titleLabel || tutorialLabel, canvas.width / 2, baseY);
+
+      // Why the move is useful, in smaller text just above the instruction.
+      const whyText = String(tutorialHud?.why || "").trim();
+      if (whyText) {
+        let whySize = Math.max(18, Math.round(titleSize * 0.62));
+        const whyMaxW = tutorialTextMaxW;
+        ctx.font = `700 ${whySize}px ${UI_FONT_FAMILY || "sans-serif"}`;
+        while (whySize > 14 && ctx.measureText(whyText).width > whyMaxW) {
+          whySize -= 1;
+          ctx.font = `700 ${whySize}px ${UI_FONT_FAMILY || "sans-serif"}`;
+        }
+        const whyY = baseY - Math.round(titleSize * 1.05);
+        ctx.lineWidth = 4;
+        ctx.fillStyle = colors.softWhite || "#DFDFC4";
+        ctx.strokeText(whyText, canvas.width / 2, whyY);
+        ctx.fillText(whyText, canvas.width / 2, whyY);
+        ctx.lineWidth = 6;
+        ctx.fillStyle = colors.gold || "#DDA677";
+        ctx.font = `800 ${titleFontSize}px ${UI_FONT_FAMILY || "sans-serif"}`;
+      }
 
       if (moveTokens && moveTokens.length) {
         const PILL_W = 30;

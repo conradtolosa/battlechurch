@@ -95,14 +95,14 @@ const TUTORIAL_ARENA_OBJECTIVES = [
   },
   // 3. One button at a time (auto-fire is paused during move drills, so only
   //    the move being learned counts)
-  { type: "kill_with_move", move: "Slash", target: 100, label: "A is your Sword. Slash 100 demons (A)" },
+  { type: "kill_with_move", move: "Slash", why: "Quick and free: no meter, no waiting. Your go-to attack.", target: 100, label: "A is your Sword. Slash 100 demons (A)" },
   {
     type: "card",
     label: "Cooldowns",
     body: "Some moves need a moment to recharge. After a Dash, the B meter under your pastor empties and refills. Wait for it to fill before you Dash again.",
     touchBody: "Some moves need a moment to recharge. After a Dash, the B button dims, says WAIT and refills like a ring. When it's bright again, you can Dash again.",
   },
-  { type: "dash_plus_kills", move: "Dash", dashTarget: 3, killTarget: 0, label: "Dash 3 times. Wait for B to recharge in between (B)" },
+  { type: "dash_plus_kills", move: "Dash", why: "Zip out of trouble, or across the room to where you're needed.", dashTarget: 3, killTarget: 0, label: "Dash 3 times. Wait for B to recharge in between (B)" },
   {
     type: "card",
     label: "The Prayer meter",
@@ -111,7 +111,7 @@ const TUTORIAL_ARENA_OBJECTIVES = [
   },
   {
     type: "kill_with_move",
-    move: "Unity Strike",
+    move: "Unity Strike", why: "Your congregation fights for you, hitting the demons near them.",
     target: 100,
     label: "Tap C for a Unity Strike. It uses 1 Prayer bar (C)",
   },
@@ -122,9 +122,9 @@ const TUTORIAL_ARENA_OBJECTIVES = [
     body: "Hold a button down to charge it. A charge meter fills while you hold. When it's full, let go to unleash a much stronger attack. Let go early and you just get the normal move.",
     touchBody: "Hold a button down to charge it. A ring fills around the button while you hold, and it says READY when it's full. Then let go to unleash a much stronger attack. Let go early and you just get the normal move.",
   },
-  { type: "kill_with_move", move: "Blast", target: 100, label: "Charge A until full, then let go: Blast (Charge A)" },
-  { type: "kill_with_move", move: "Crash", target: 100, label: "Charge B until full, then let go: Crash (Charge B)" },
-  { type: "kill_with_move", move: "Purify", target: 100, label: "Charge C until full, then let go: Purify (Charge C)" },
+  { type: "kill_with_move", move: "Blast", why: "Throws a slash that flies across the screen to hit far-away demons.", target: 100, label: "Charge A until full, then let go: Blast (Charge A)" },
+  { type: "kill_with_move", move: "Crash", why: "A charging dash that plows through a crowd without getting hurt.", target: 100, label: "Charge B until full, then let go: Crash (Charge B)" },
+  { type: "kill_with_move", move: "Purify", why: "A wave of prayer bursts out around you and hits every demon it reaches.", target: 100, label: "Charge C until full, then let go: Purify (Charge C)" },
   // 5. Quick combos
   {
     type: "card",
@@ -132,10 +132,10 @@ const TUTORIAL_ARENA_OBJECTIVES = [
     body: "Press one button, then quickly press another, to combo. Combos hit two to three times harder than a single slash. Combos that use B share the Dash cooldown, so wait for B to recharge between them.",
     touchBody: "Slide your thumb quickly from one button to another to combo. Combos hit two to three times harder than a single slash. Combos that use B share the Dash cooldown: wait for the B button to brighten between them.",
   },
-  { type: "kill_with_move", move: "Smash", target: 100, label: "Smash: B \u2192 A. Wait for B to recharge (B -> A)", touchLabel: "Smash: slide B \u2192 A. Wait for B to recharge (B -> A)" },
-  { type: "kill_with_move", move: "Cleave", target: 100, label: "Cleave: A \u2192 B. Wait for B to recharge (A -> B)", touchLabel: "Cleave: slide A \u2192 B. Wait for B to recharge (A -> B)" },
-  { type: "kill_with_move", move: "Reap", target: 100, label: "Reap: C \u2192 A (C -> A)", touchLabel: "Reap: slide C \u2192 A (C -> A)" },
-  { type: "kill_with_move", move: "Clash", target: 100, label: "Clash: C \u2192 B (C -> B)", touchLabel: "Clash: slide C \u2192 B (C -> B)" },
+  { type: "kill_with_move", move: "Smash", why: "Dash in and hit for double damage. Nothing can hurt you during it.", target: 100, label: "Smash: B \u2192 A. Wait for B to recharge (B -> A)", touchLabel: "Smash: slide B \u2192 A. Wait for B to recharge (B -> A)" },
+  { type: "kill_with_move", move: "Cleave", why: "A heavy double slash: triple damage to whatever is in front of you.", target: 100, label: "Cleave: A \u2192 B. Wait for B to recharge (A -> B)", touchLabel: "Cleave: slide A \u2192 B. Wait for B to recharge (A -> B)" },
+  { type: "kill_with_move", move: "Reap", why: "Spin your sword to hit every demon around you. Great when surrounded.", target: 100, label: "Reap: C \u2192 A (C -> A)", touchLabel: "Reap: slide C \u2192 A (C -> A)" },
+  { type: "kill_with_move", move: "Clash", why: "A holy dash that slices through a crowd. Uses a little Prayer.", target: 100, label: "Clash: C \u2192 B (C -> B)", touchLabel: "Clash: slide C \u2192 B (C -> B)" },
   // 6. Why it matters
   {
     type: "card",
@@ -150,10 +150,10 @@ const TUTORIAL_ARENA_OBJECTIVES = [
     body: "Advanced moves charge two buttons together. Hold BOTH buttons down until BOTH charge meters are full, then let go. These are optional: press Continue to practice them, or Skip to start playing.",
     touchBody: "Advanced moves charge two buttons together. Press right on the line between two buttons to hold both (or use two fingers), and hold until both say READY. Then let go. Pressing the very middle, where all three meet, holds all three. These are optional: Continue to practice, or Skip to start playing.",
   },
-  { type: "kill_with_move", move: "Thrash", target: 100, label: "Thrash: charge B and A together (Charge B + A)", touchLabel: "Thrash: hold the line between A and B until both are READY (Charge B + A)" },
-  { type: "kill_with_move", move: "Hedge", target: 100, label: "Hedge: charge A and C together (Charge A + C)", touchLabel: "Hedge: hold the line between A and C until both are READY (Charge A + C)" },
-  { type: "kill_with_move", move: "Trash", target: 100, label: "Trash: charge B, then hold C too (Charge B + C)", touchLabel: "Trash: hold the line between B and C until B is READY (Charge B + C)" },
-  { type: "kill_with_move", move: "Prayer Storm", target: 100, label: "Prayer Storm: charge A, B and C together (Charge A + B + C)", touchLabel: "Prayer Storm: hold the middle, where all three meet, until all are READY (Charge A + B + C)" },
+  { type: "kill_with_move", move: "Thrash", why: "A flurry of slashes. Best against armored demons.", target: 100, label: "Thrash: charge B and A together (Charge B + A)", touchLabel: "Thrash: hold the line between A and B until both are READY (Charge B + A)" },
+  { type: "kill_with_move", move: "Hedge", why: "A ring of fire around you that burns demons who get close.", target: 100, label: "Hedge: charge A and C together (Charge A + C)", touchLabel: "Hedge: hold the line between A and C until both are READY (Charge A + C)" },
+  { type: "kill_with_move", move: "Trash", why: "Roll through the crowd, spinning and slicing everything you touch.", target: 100, label: "Trash: charge B, then hold C too (Charge B + C)", touchLabel: "Trash: hold the line between B and C until B is READY (Charge B + C)" },
+  { type: "kill_with_move", move: "Prayer Storm", why: "Your whole church prays: fire rains down across the battlefield. Uses the full meter.", target: 100, label: "Prayer Storm: charge A, B and C together (Charge A + B + C)", touchLabel: "Prayer Storm: hold the middle, where all three meet, until all are READY (Charge A + B + C)" },
   // 8. Combo strings (no congregation: just you and a practice dummy that
   //    walks, swings and can't be defeated)
   {
@@ -165,7 +165,7 @@ const TUTORIAL_ARENA_OBJECTIVES = [
   {
     type: "combo_string",
     arena: "dummy",
-    sequence: ["Smash", "Slash"],
+    sequence: ["Smash", "Slash"], why: "Smash gets you in close safely, then Slash hits again before they recover.",
     inputs: "B \u2192 A,  A",
     target: 3,
     label: "Combo string: Smash, Slash. Get close to the dummy first",
@@ -174,7 +174,7 @@ const TUTORIAL_ARENA_OBJECTIVES = [
   {
     type: "combo_string",
     arena: "dummy",
-    sequence: ["Slash", "Smash", "Slash"],
+    sequence: ["Slash", "Smash", "Slash"], why: "Three hits in a row keep your Hit Chain growing. No meter needed.",
     inputs: "A,  B \u2192 A,  A",
     target: 3,
     label: "Combo string: Slash, Smash, Slash",
@@ -182,7 +182,7 @@ const TUTORIAL_ARENA_OBJECTIVES = [
   {
     type: "combo_string",
     arena: "dummy",
-    sequence: ["Slash", "Smash", "Reap"],
+    sequence: ["Slash", "Smash", "Reap"], why: "Hit, close the gap, then spin to finish the whole crowd.",
     inputs: "A,  B \u2192 A,  C \u2192 A",
     target: 3,
     label: "Combo string: Slash, Smash, Reap",
@@ -190,7 +190,7 @@ const TUTORIAL_ARENA_OBJECTIVES = [
   {
     type: "combo_string",
     arena: "dummy",
-    sequence: ["Slash", "Reap", "Smash"],
+    sequence: ["Slash", "Reap", "Smash"], why: "Spin to clear the crowd, then Smash the one still standing.",
     inputs: "A,  C \u2192 A,  B \u2192 A",
     target: 3,
     label: "Combo string: Slash, Reap, Smash",
@@ -198,7 +198,7 @@ const TUTORIAL_ARENA_OBJECTIVES = [
   {
     type: "combo_string",
     arena: "dummy",
-    sequence: ["Blast", "Smash", "Reap"],
+    sequence: ["Blast", "Smash", "Reap"], why: "Hit from far away, rush in, then spin to finish them.",
     inputs: "Charge A,  B \u2192 A,  C \u2192 A",
     target: 3,
     label: "Combo string: Blast, Smash, Reap",
@@ -621,7 +621,7 @@ function updateTutorialArenaHudState() {
     moveKey = "";
   }
   const shownLabel = (isTouchControlsActive() && objective.touchLabel) || label;
-  setTutorialArenaHud({ label: shownLabel, progressText, moveKey }, stepButtons);
+  setTutorialArenaHud({ label: shownLabel, progressText, moveKey, why: String(objective.why || "") }, stepButtons);
 }
 
 function announceTutorialArenaObjective() {
