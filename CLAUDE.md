@@ -7,7 +7,7 @@ branches → their own preview URL (use `/`, not `/index.html`, which redirects)
 
 ## Save tokens: how to find things
 
-- **Never read whole big files.** Sizes: `game.js` ~32.6k lines, `renderer.js`
+- **Never read whole big files.** Sizes: `game.js` ~30.6k lines, `tutorial_arena.js` ~2k, `renderer.js`
   ~16k, `level_data.js` ~15k (453 KB of level data, don't read it), `entities.js`
   ~5k, `MapScreen.js` ~4.7k, `levels.js` ~2.6k, `hud.js` ~2.5k, `input.js` ~1.9k.
   Use `grep -n "function name"` then `Read` with offset/limit.
@@ -40,8 +40,8 @@ branches → their own preview URL (use `/`, not `/index.html`, which redirects)
 | Keyboard / gamepad / touch | `input.js`. Keys: A = ArrowLeft, B = ArrowDown, C = ArrowRight, Space = pause/select. Game reads `keysPressed` / `keysJustPressed` |
 | Touch action pad | `input.js` `configureArcControl` (constants `ABC_PAD_*`, `ABC_INTENT_MS`, `ABC_SLIDE_*`, trail/flash timings) + the `#arcControl` SVG in `index.html` — keep the SVG and the `ABC_PAD_*` angles in sync. Emulates keys via `pressVirtualKey`/`releaseVirtualKey`. Test hook: `arcControl.__abcPoint("A" / "A+B" / "ABC")` |
 | Touch movement stick | `input.js` `configureVirtualJoystick` + `#moveStick` SVG in `index.html` |
-| Tutorial | `game.js` block starting at `let devMeleeArenaMode` / `TUTORIAL_ARENA_OBJECTIVES` through `requestTutorialArenaLaunch`. Key fns: `startTutorialArenaObjective`, `updateTutorialArenaHudState`, `checkTutorialArenaObjectiveComplete`, `recordTutorialArenaComboMove`, `recordTutorialArenaCounter`, `maintainTutorialArenaComboDummy`, `runFirstTimeTutorialThen`, `exitTutorialArenaToGame`. Drawn in `hud.js` `drawTutorialArenaObjective` and `renderer.js` (`drawTutorialArenaCard`, buttons near `drawTotalCongregationPill`). Seen flag: localStorage `battlechurch.tutorialSeen.v1` |
-| Dev melee arena | same block: `requestDevMeleeArenaLaunch`, `spawnDevMeleeArenaEnemy`. Same block also has battlefield floor helpers the real game uses (`updateBattlefieldFloorSelection`) |
+| Tutorial | `tutorial_arena.js` (moved out of game.js; loads right before it — its top-level values must stay plain literals). Data: `TUTORIAL_ARENA_OBJECTIVES`. Key fns: `startTutorialArenaObjective`, `updateTutorialArenaHudState`, `checkTutorialArenaObjectiveComplete`, `recordTutorialArenaComboMove`, `recordTutorialArenaCounter`, `maintainTutorialArenaComboDummy`, `runFirstTimeTutorialThen`, `exitTutorialArenaToGame`, `requestTutorialArenaLaunch`. Hooks into combat still live in game.js (grep `tutorialArena`). Drawn in `hud.js` `drawTutorialArenaObjective` and `renderer.js` (`drawTutorialArenaCard`, buttons near `drawTotalCongregationPill`). Seen flag: localStorage `battlechurch.tutorialSeen.v1` |
+| Dev melee arena | `tutorial_arena.js`: `requestDevMeleeArenaLaunch`, `spawnDevMeleeArenaEnemy`. Same file also has battlefield floor helpers the real game uses (`updateBattlefieldFloorSelection`) |
 | Dev editors | `dev/` (level builder, enemy/boss/hitbox editors, paperdoll sandboxes) — loaded by index.html but dev-only UI |
 
 Objective types in `TUTORIAL_ARENA_OBJECTIVES`: card, move_wasd, kill_any,
@@ -53,7 +53,7 @@ punish_counter. Fields: `arena: "dummy"`, `touchLabel`, `touchBody`,
 
 ```bash
 dev/tests/run.sh            # everything (~15 min on the slow test box)
-dev/tests/run.sh smoke      # ~1 min: loads, no page errors, tutorial + dev arena open
+dev/tests/run.sh smoke      # ~2 min: loads, no page errors, tutorial + dev arena + a real battle
 dev/tests/run.sh touch_moves.js phone --slow --only=Reap
 ```
 

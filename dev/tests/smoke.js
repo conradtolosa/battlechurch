@@ -1,6 +1,6 @@
-// Quick check (~30s): the game loads on desktop and touch with no page errors,
-// the title screen runs, the tutorial and dev melee arena open, and a level
-// starts and runs for a few seconds.
+// Quick check (~1-2 min): the game loads on desktop and touch with no page errors,
+// the title screen runs, the tutorial and dev melee arena open, and a
+// real battle starts from the title screen and runs for a few seconds.
 // Usage: node dev/tests/smoke.js
 "use strict";
 const H = require("./helpers");
@@ -35,5 +35,21 @@ const H = require("./helpers");
     H.check("no page errors", !errors.length, errors.slice(0, 3).join(" | "));
     await browser.close();
   }
+
+  // A real battle: title -> save -> map -> start the first district.
+  console.log("-- real battle (desktop)");
+  const { browser, page, errors } = await H.openGame({ viewport: "desktop" });
+  await page.evaluate(() => localStorage.setItem("battlechurch.tutorialSeen.v1", "1"));
+  await page.keyboard.press(" ");
+  await page.waitForTimeout(900);
+  await page.keyboard.press(" ");
+  await page.waitForTimeout(2500);
+  H.check("save pick goes to the map", await page.evaluate(() => mapActive === true));
+  for (let i = 0; i < 6; i++) { await page.keyboard.press(" "); await page.waitForTimeout(1500); }
+  await page.waitForTimeout(6000);
+  const battle = await page.evaluate(() => ({ map: mapActive, started: gameStarted, enemies: enemies.length, floor: battlefieldFloorSelectionKey }));
+  H.check("battle running with enemies and a floor", !battle.map && battle.started && battle.enemies > 0 && Boolean(battle.floor), JSON.stringify(battle));
+  H.check("no page errors (battle)", !errors.length, errors.slice(0, 3).join(" | "));
+  await browser.close();
   H.finish();
 })().catch((e) => { console.error("CRASHED", e); process.exit(2); });
