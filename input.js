@@ -1058,10 +1058,16 @@
     };
 
     // Bright pop on every press (taps included); refresh again when it ends.
+    const lastPopAt = { A: 0, B: 0, C: 0 };
     const flashSeg = (seg) => {
-      flashUntil[seg] = nowMs() + ABC_PRESS_FLASH_MS;
+      const now = nowMs();
+      flashUntil[seg] = now + ABC_PRESS_FLASH_MS;
+      // One pop per touch: the touch-down pop already covers a hold that the
+      // game receives a moment later.
+      const recentlyPopped = now - lastPopAt[seg] < 350;
+      lastPopAt[seg] = now;
       const el = circleEls.find((c) => c.dataset.seg === seg);
-      if (el) {
+      if (el && !recentlyPopped) {
         el.classList.remove("is-pop");
         void el.getBBox(); // restart the pop animation
         el.classList.add("is-pop");
@@ -1115,17 +1121,27 @@
         const isReady = held && charged[seg];
         el.classList.toggle("is-active", lit);
         el.classList.toggle("is-charged", isReady);
-        if (halos[seg]) halos[seg].classList.toggle("is-on", lit);
-        // Brighter the longer it's held: brightness and glow follow the charge.
-        if (held && !isReady && progress[seg] > 0.02) {
-          const p = Math.min(1, progress[seg]);
+        if (halos[seg]) {
+          halos[seg].classList.toggle("is-on", lit);
+          halos[seg].classList.toggle("is-ready", isReady);
+        }
+        // Starts only a little brighter than normal (after the click flash),
+        // then brightness and glow climb with the charge to near-white.
+        if (held && !isReady) {
+          const p = Math.min(1, Math.max(0, progress[seg]));
           el.style.filter =
-            `brightness(${(1.45 + 0.5 * p).toFixed(3)}) saturate(1.15) ` +
-            `drop-shadow(0 0 ${(16 + 14 * p).toFixed(1)}px rgba(255, 255, 255, ${(0.85 + 0.15 * p).toFixed(2)}))`;
-          if (halos[seg]) halos[seg].style.strokeWidth = `${(18 + 10 * p).toFixed(1)}px`;
+            `brightness(${(1.08 + 0.92 * p).toFixed(3)}) saturate(${(1.0 + 0.2 * p).toFixed(2)}) ` +
+            `drop-shadow(0 0 ${(4 + 24 * p).toFixed(1)}px rgba(255, 255, 255, ${(0.45 + 0.55 * p).toFixed(2)}))`;
+          if (halos[seg]) {
+            halos[seg].style.strokeWidth = `${(10 + 16 * p).toFixed(1)}px`;
+            halos[seg].style.opacity = (0.35 + 0.6 * p).toFixed(2);
+          }
         } else {
           el.style.filter = "";
-          if (halos[seg]) halos[seg].style.strokeWidth = "";
+          if (halos[seg]) {
+            halos[seg].style.strokeWidth = "";
+            halos[seg].style.opacity = "";
+          }
         }
         // Flash once the moment it becomes fully charged.
         if (isReady && !wasReady[seg]) {
@@ -1340,6 +1356,7 @@
         lastY: event.clientY,
       };
       state.pendingTimer = setTimeout(() => commitPending(state), ABC_INTENT_MS);
+      flashSeg(seg); // click feedback right away
       startTrail(state, event.clientX, event.clientY);
       pointers.set(event.pointerId, state);
       refresh();

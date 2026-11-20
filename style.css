@@ -2089,7 +2089,9 @@ body.layout-slab.touch-enabled .joystick-area.left {
    whole button brightens and its uncovered outer edge glows). */
 #arcControl .arc-segment.is-active {
   opacity: 1;
-  filter: brightness(1.45) saturate(1.15) drop-shadow(0 0 16px rgba(255, 255, 255, 0.85));
+  /* Pressed, before any charge: just a little brighter (the click itself is
+     shown by the quick pop flash below). */
+  filter: brightness(1.08) drop-shadow(0 0 4px rgba(255, 255, 255, 0.45));
 }
 
 #arcControl .arc-segment.is-pop {
@@ -2097,8 +2099,8 @@ body.layout-slab.touch-enabled .joystick-area.left {
 }
 
 @keyframes abc-press-pop {
-  0% { filter: brightness(2.1) saturate(1.2) drop-shadow(0 0 26px rgba(255, 255, 255, 1)); }
-  100% { filter: brightness(1.45) saturate(1.15) drop-shadow(0 0 16px rgba(255, 255, 255, 0.85)); }
+  0% { filter: brightness(2.0) saturate(1.1) drop-shadow(0 0 22px rgba(255, 255, 255, 1)); }
+  100% { filter: brightness(1.08) drop-shadow(0 0 4px rgba(255, 255, 255, 0.45)); }
 }
 
 /* Keep the cooldown look (dimmed B) even while pressed. */
@@ -2120,7 +2122,7 @@ body.layout-slab.touch-enabled .joystick-area.left {
 .abc-press-halo[data-seg="C"] { stroke: #FFC2C2; filter: drop-shadow(0 0 12px #FF6B6B); }
 
 .abc-press-halo.is-on {
-  opacity: 0.95;
+  opacity: 0.45;
   transition: opacity 0.02s linear;
 }
 
@@ -2155,4 +2157,9 @@ body.layout-slab.touch-enabled .joystick-area.left {
 @keyframes abc-halo-flash {
   0% { stroke: #FFFFFF; stroke-width: 34px; opacity: 1; }
   100% { stroke-width: 22px; opacity: 0.95; }
+}
+
+.abc-press-halo.is-on.is-ready {
+  opacity: 0.95;
+  stroke-width: 26px;
 }
