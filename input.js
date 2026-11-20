@@ -836,6 +836,10 @@
   // A touch waits this long before counting as a hold, so a tap or a quick
   // slide can be sent to the game as a clean, fast key sequence.
   const ABC_INTENT_MS = 200;
+  // Swipe trail: how long after reaching the second button to check whether
+  // it made a combo, and how long the trail takes to fade out.
+  const ABC_TRAIL_JUDGE_MS = 350;
+  const ABC_TRAIL_FADE_MS = 500;
   // Thumb movement (px) that counts as sliding rather than resting.
   const ABC_SLIDE_MOVE_PX = 3;
   // Fast slide: gap between the first and second button going down.
@@ -896,6 +900,111 @@
       C: { key: "ArrowRight", setPrayerBomb: true },
     };
     const pointers = new Map(); // pointerId -> { seg, held: Set, pressedAt: {} }
+
+    // Swipe trail: a short comet line along the thumb's path, shown only for
+    // slides. It runs from the first button's colour to the second's, then
+    // turns gold if the slide made a combo (Smash, Cleave, Reap, Clash) or
+    // grey if it didn't, and fades out.
+    const SWIPE_COMBO_MOVES = new Set(["Smash", "Cleave", "Reap", "Clash"]);
+    const SEG_TRAIL_COLORS = { A: "#7FCBFF", B: "#BFE6FF", C: "#FF6B6B" };
+    let trailDefs = arcEl.querySelector("defs");
+    if (!trailDefs) {
+      trailDefs = document.createElementNS(SVG_NS, "defs");
+      arcEl.insertBefore(trailDefs, arcEl.firstChild);
+    }
+    const trailLayer = document.createElementNS(SVG_NS, "g");
+    trailLayer.setAttribute("class", "abc-trail-layer");
+    arcEl.appendChild(trailLayer);
+    let trailSerial = 0;
+
+    const toPadXY = (clientX, clientY) => {
+      const ctm = arcEl.getScreenCTM && arcEl.getScreenCTM();
+      if (!ctm) return null;
+      const pt = new DOMPoint(clientX, clientY).matrixTransform(ctm.inverse());
+      return { x: pt.x, y: pt.y };
+    };
+    const startTrail = (state, clientX, clientY) => {
+      const p = toPadXY(clientX, clientY);
+      state.trail = { points: p ? [p] : [], el: null, grad: null, judged: false, slideAt: 0, judgeTimer: null };
+    };
+    const renderTrail = (trail) => {
+      if (!trail.el || !trail.points.length) return;
+      trail.el.setAttribute("points", trail.points.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" "));
+      const a = trail.points[0];
+      const b = trail.points[trail.points.length - 1];
+      trail.grad.setAttribute("x1", a.x.toFixed(1));
+      trail.grad.setAttribute("y1", a.y.toFixed(1));
+      trail.grad.setAttribute("x2", b.x.toFixed(1));
+      trail.grad.setAttribute("y2", b.y.toFixed(1));
+    };
+    const addTrailPoint = (state, clientX, clientY) => {
+      const trail = state.trail;
+      if (!trail) return;
+      const p = toPadXY(clientX, clientY);
+      if (!p) return;
+      const last = trail.points[trail.points.length - 1];
+      if (last && Math.hypot(p.x - last.x, p.y - last.y) < 3) return;
+      trail.points.push(p);
+      if (trail.points.length > 80) trail.points.shift();
+      renderTrail(trail);
+    };
+    // The thumb reached another button: show the trail (first time) and
+    // check shortly after whether the game made a combo out of it.
+    const showTrail = (state, fromSeg, toSeg) => {
+      const trail = state.trail;
+      if (!trail) return;
+      if (!trail.el) {
+        const id = `abcTrailGrad${(trailSerial += 1)}`;
+        const grad = document.createElementNS(SVG_NS, "linearGradient");
+        grad.setAttribute("id", id);
+        grad.setAttribute("gradientUnits", "userSpaceOnUse");
+        const s0 = document.createElementNS(SVG_NS, "stop");
+        s0.setAttribute("offset", "0");
+        s0.setAttribute("stop-color", SEG_TRAIL_COLORS[fromSeg] || "#ffffff");
+        const s1 = document.createElementNS(SVG_NS, "stop");
+        s1.setAttribute("offset", "1");
+        grad.appendChild(s0);
+        grad.appendChild(s1);
+        trailDefs.appendChild(grad);
+        const line = document.createElementNS(SVG_NS, "polyline");
+        line.setAttribute("class", "abc-trail");
+        line.setAttribute("stroke", `url(#${id})`);
+        trailLayer.appendChild(line);
+        trail.el = line;
+        trail.grad = grad;
+      }
+      trail.grad.lastChild.setAttribute("stop-color", SEG_TRAIL_COLORS[toSeg] || "#ffffff");
+      trail.slideAt = nowMs();
+      trail.judged = false;
+      trail.el.classList.remove("is-combo", "is-miss");
+      clearTimeout(trail.judgeTimer);
+      trail.judgeTimer = setTimeout(() => judgeTrail(trail), ABC_TRAIL_JUDGE_MS);
+      renderTrail(trail);
+    };
+    const judgeTrail = (trail) => {
+      if (!trail.el || trail.judged) return;
+      trail.judged = true;
+      const banner = typeof window !== "undefined" ? window.__moveAnnouncementBanner : null;
+      const combo = Boolean(
+        banner && banner.shownAt >= trail.slideAt - 60 && SWIPE_COMBO_MOVES.has(banner.moveName),
+      );
+      trail.el.classList.add(combo ? "is-combo" : "is-miss");
+    };
+    const finishTrail = (trail) => {
+      if (!trail) return;
+      if (!trail.el) return; // never left the first button: no trail
+      const fade = () => {
+        judgeTrail(trail);
+        trail.el.classList.add("is-fading");
+        setTimeout(() => {
+          trail.el.remove();
+          if (trail.grad) trail.grad.remove();
+        }, ABC_TRAIL_FADE_MS + 50);
+      };
+      const wait = Math.max(0, trail.slideAt + ABC_TRAIL_JUDGE_MS - nowMs());
+      clearTimeout(trail.judgeTimer);
+      setTimeout(fade, wait);
+    };
     const holdCounts = { A: 0, B: 0, C: 0 };
     let rafId = null;
 
@@ -1143,6 +1252,7 @@
         lastY: event.clientY,
       };
       state.pendingTimer = setTimeout(() => commitPending(state), ABC_INTENT_MS);
+      startTrail(state, event.clientX, event.clientY);
       pointers.set(event.pointerId, state);
       refresh();
       ensureTicking();
@@ -1154,6 +1264,7 @@
       if (!state) return;
       event.preventDefault();
       if (state.both) return; // two-button press: stay on both until lifted
+      addTrailPoint(state, event.clientX, event.clientY);
       // A moving thumb is sliding, not holding: only count the hold time while
       // the thumb rests still, so a slower slide (e.g. A -> C through the A+C
       // slice) still comes out as a combo instead of "A, then C".
@@ -1171,6 +1282,7 @@
       if (!seg || seg === state.seg) return;
       const prev = state.seg;
       state.seg = seg;
+      showTrail(state, prev, seg);
 
       // A -> C and B -> C aren't moves in the game (only C -> A Reap and
       // C -> B Clash are). Sliding onto C from A or B just does the A / B
@@ -1242,6 +1354,7 @@
       if (!state) return;
       pointers.delete(event.pointerId);
       state.ended = true;
+      finishTrail(state.trail);
       try {
         arcEl.releasePointerCapture(event.pointerId);
       } catch (e) {}
@@ -1278,6 +1391,7 @@
     // Used when touch controls are hidden/reset.
     arcEl.__resetAbcButtons = () => {
       pointers.clear();
+      while (trailLayer.firstChild) trailLayer.removeChild(trailLayer.firstChild);
       holdCounts.A = 0;
       holdCounts.B = 0;
       holdCounts.C = 0;

@@ -2054,3 +2054,33 @@ body.layout-slab.touch-enabled .joystick-area.left {
   stroke-linecap: round;
   pointer-events: none;
 }
+
+/* Swipe trail on the action pad (slides only): starts in the first button's
+   colour, ends in the second's; gold if it made a combo, grey if not. */
+.abc-trail {
+  fill: none;
+  stroke-width: 14px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.95;
+  pointer-events: none;
+  filter: drop-shadow(0 0 4px rgba(10, 15, 31, 0.9));
+  transition: opacity 0.5s ease-out, stroke 0.12s ease-out;
+}
+
+.abc-trail.is-combo {
+  stroke: #FFD45A;
+  filter: drop-shadow(0 0 10px rgba(255, 200, 70, 0.95));
+}
+
+.abc-trail.is-miss {
+  stroke: rgba(200, 205, 215, 0.85);
+}
+
+.abc-trail.is-fading {
+  opacity: 0;
+}
+
+.abc-trail-layer {
+  pointer-events: none;
+}
