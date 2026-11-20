@@ -817,10 +817,11 @@
   const ABC_PAD_CX = 130;
   const ABC_PAD_CY = 130;
   const ABC_PAD_R = 122;
-  const ABC_PAD_WEDGES = { C: [-130, -50], A: [-10, 70], B: [110, 190] };
-  // "Both" slices between each pair of buttons.
+  const ABC_PAD_WEDGES = { C: [-130, -55], A: [-5, 70], B: [110, 190] };
+  // "Both" zones between each pair of buttons. C + A is wider (50 degrees vs
+  // 40) because that border points away from the thumb and is harder to hit.
   const ABC_PAD_DIAGONALS = {
-    AC: { range: [-50, -10], segs: ["A", "C"] },
+    AC: { range: [-55, -5], segs: ["A", "C"] },
     AB: { range: [70, 110], segs: ["A", "B"] },
     BC: { range: [190, 230], segs: ["B", "C"] },
   };
