@@ -859,14 +859,29 @@
     const SVG_NS = "http://www.w3.org/2000/svg";
     const rings = {};
     const subLabels = {};
-    const rimArcPath = (seg, radius) => {
+    // Arc along a button's outer edge. Normally it fills clockwise; with
+    // reverse it starts at the other end and fills counter-clockwise.
+    const rimArcPath = (seg, radius, reverse = false) => {
       const [a0, a1] = ABC_PAD_VISIBLE[seg];
       const pad = 5; // degrees of breathing room at each end
       const p = (deg) => {
         const t = (deg * Math.PI) / 180;
         return `${(ABC_PAD_CX + radius * Math.cos(t)).toFixed(2)} ${(ABC_PAD_CY + radius * Math.sin(t)).toFixed(2)}`;
       };
-      return `M ${p(a0 + pad)} A ${radius} ${radius} 0 0 1 ${p(a1 - pad)}`;
+      return reverse
+        ? `M ${p(a1 - pad)} A ${radius} ${radius} 0 0 0 ${p(a0 + pad)}`
+        : `M ${p(a0 + pad)} A ${radius} ${radius} 0 0 1 ${p(a1 - pad)}`;
+    };
+    // Two buttons pressed together: each meter starts at the shared border
+    // (under the thumb) and fills outward, one clockwise, one counter. A
+    // button whose END (clockwise) is the shared border fills in reverse.
+    const sameAngle = (a, b) => (((a - b) % 360) + 360) % 360 === 0;
+    const fillsFromEnd = (seg, other) => sameAngle(ABC_PAD_VISIBLE[seg][1], ABC_PAD_VISIBLE[other][0]);
+    const setRingDirection = (seg, reverse) => {
+      const ring = rings[seg];
+      if (!ring || ring.__reverse === reverse) return;
+      ring.__reverse = reverse;
+      ring.setAttribute("d", rimArcPath(seg, ABC_PAD_R + 9, reverse));
     };
     const makeRimArc = (seg, className) => {
       const arc = document.createElementNS(SVG_NS, "path");
@@ -1033,6 +1048,17 @@
           if (isCharged(seg, state.pressedAt[seg])) charged[seg] = true;
           progress[seg] = Math.max(progress[seg], chargeProgress(seg, state.pressedAt[seg]));
         });
+      });
+      // Ring fill direction: outward from the thumb for two-button presses.
+      const reverseSegs = new Set();
+      pointers.forEach((state) => {
+        if (!state.both || state.held.size !== 2) return;
+        const [x, y] = Array.from(state.held);
+        if (fillsFromEnd(x, y)) reverseSegs.add(x);
+        if (fillsFromEnd(y, x)) reverseSegs.add(y);
+      });
+      Object.keys(rings).forEach((seg) => {
+        if (holdCounts[seg] > 0) setRingDirection(seg, reverseSegs.has(seg));
       });
       Object.keys(rings).forEach((seg) => {
         const ring = rings[seg];
