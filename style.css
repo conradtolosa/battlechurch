@@ -2123,3 +2123,36 @@ body.layout-slab.touch-enabled .joystick-area.left {
   opacity: 0.95;
   transition: opacity 0.02s linear;
 }
+
+/* Fully charged: bright, steady pulse (overrides the older stroke-only one). */
+#arcControl .arc-segment.is-charged {
+  stroke: #FFE7A8;
+  stroke-width: 4px;
+  animation: abc-ready-pulse 0.45s ease-in-out infinite alternate;
+}
+
+@keyframes abc-ready-pulse {
+  from { filter: brightness(1.9) saturate(1.2) drop-shadow(0 0 18px rgba(255, 236, 170, 0.9)); }
+  to { filter: brightness(2.15) saturate(1.25) drop-shadow(0 0 30px rgba(255, 236, 170, 1)); }
+}
+
+/* The moment it becomes ready: a big white flash. */
+#arcControl .arc-segment.is-ready-flash {
+  animation: abc-ready-flash 0.45s ease-out;
+}
+
+@keyframes abc-ready-flash {
+  0% { filter: brightness(3.2) saturate(0.6) drop-shadow(0 0 40px rgba(255, 255, 255, 1)); }
+  35% { filter: brightness(1.8) saturate(1.2) drop-shadow(0 0 20px rgba(255, 236, 170, 0.9)); }
+  60% { filter: brightness(2.8) saturate(0.8) drop-shadow(0 0 36px rgba(255, 255, 255, 1)); }
+  100% { filter: brightness(1.9) saturate(1.2) drop-shadow(0 0 18px rgba(255, 236, 170, 0.9)); }
+}
+
+.abc-press-halo.is-ready-flash {
+  animation: abc-halo-flash 0.45s ease-out;
+}
+
+@keyframes abc-halo-flash {
+  0% { stroke: #FFFFFF; stroke-width: 34px; opacity: 1; }
+  100% { stroke-width: 22px; opacity: 0.95; }
+}

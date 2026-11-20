@@ -838,6 +838,8 @@
   const ABC_INTENT_MS = 200;
   // Minimum time a pressed button stays lit (so quick taps are visible).
   const ABC_PRESS_FLASH_MS = 220;
+  // Big flash when a held button becomes fully charged.
+  const ABC_READY_FLASH_MS = 450;
   // Swipe trail: how long after reaching the second button to check whether
   // it made a combo, and how long the trail takes to fade out.
   const ABC_TRAIL_JUDGE_MS = 350;
@@ -864,6 +866,7 @@
     // Taps are only pressed for a split second; keep the flash on at least
     // this long so it's visible.
     const flashUntil = { A: 0, B: 0, C: 0 };
+    const wasReady = { A: false, B: false, C: false };
     const subLabels = {};
     // Arc along a button's outer edge. Normally it fills clockwise; with
     // reverse it starts at the other end and fills counter-clockwise.
@@ -1107,10 +1110,39 @@
       const flashNow = nowMs();
       circleEls.forEach((el) => {
         const seg = el.dataset.seg;
-        const lit = holdCounts[seg] > 0 || touched[seg] || flashUntil[seg] > flashNow;
+        const held = holdCounts[seg] > 0;
+        const lit = held || touched[seg] || flashUntil[seg] > flashNow;
+        const isReady = held && charged[seg];
         el.classList.toggle("is-active", lit);
-        el.classList.toggle("is-charged", holdCounts[seg] > 0 && charged[seg]);
+        el.classList.toggle("is-charged", isReady);
         if (halos[seg]) halos[seg].classList.toggle("is-on", lit);
+        // Brighter the longer it's held: brightness and glow follow the charge.
+        if (held && !isReady && progress[seg] > 0.02) {
+          const p = Math.min(1, progress[seg]);
+          el.style.filter =
+            `brightness(${(1.45 + 0.5 * p).toFixed(3)}) saturate(1.15) ` +
+            `drop-shadow(0 0 ${(16 + 14 * p).toFixed(1)}px rgba(255, 255, 255, ${(0.85 + 0.15 * p).toFixed(2)}))`;
+          if (halos[seg]) halos[seg].style.strokeWidth = `${(18 + 10 * p).toFixed(1)}px`;
+        } else {
+          el.style.filter = "";
+          if (halos[seg]) halos[seg].style.strokeWidth = "";
+        }
+        // Flash once the moment it becomes fully charged.
+        if (isReady && !wasReady[seg]) {
+          el.classList.remove("is-ready-flash");
+          void el.getBBox(); // restart the animation
+          el.classList.add("is-ready-flash");
+          if (halos[seg]) {
+            halos[seg].classList.remove("is-ready-flash");
+            void halos[seg].getBBox();
+            halos[seg].classList.add("is-ready-flash");
+          }
+          setTimeout(() => {
+            el.classList.remove("is-ready-flash");
+            if (halos[seg]) halos[seg].classList.remove("is-ready-flash");
+          }, ABC_READY_FLASH_MS);
+        }
+        wasReady[seg] = isReady;
       });
       labelEls.forEach((el) => {
         el.classList.toggle("is-active", holdCounts[el.dataset.seg] > 0);
