@@ -1,0 +1,5 @@
+# Skipped by ripgrep (and AI search tools built on it) unless searched by name.
+# Pure data: search it explicitly, e.g. `rg pattern level_data.js`.
+level_data.js
+assets/
+playing-instructions.md

@@ -10,7 +10,9 @@ other branches → their own preview (use `/`, not `/index.html`).
 - Never read a whole big file. `grep -n "function name"` then Read with
   offset/limit. Line numbers drift; names below are stable.
 - Don't read: `level_data.js` (453 KB data), `assets/` (74 MB),
-  `playing-instructions.md` (outdated, unused).
+  `playing-instructions.md` (outdated, unused). `.ignore` keeps them out of
+  directory-wide searches; search them by name when needed
+  (`rg pattern level_data.js`).
 - All classic scripts share one global scope (top-level `let`/`const`/functions
   are globals). `input.js` and `renderer.js` are IIFEs: their inner functions
   (`configureArcControl`, `drawGame`, …) are not globals.
@@ -37,6 +39,28 @@ other branches → their own preview (use `/`, not `/index.html`).
 | `enemy_catalog.js`, `hitboxes.js` | Enemy stats and hitboxes |
 | text | `config_text.js`, `config_tips.js`, `mission_brief_data.js`, `npc_dialogue_lines.js`, `congregation_dialogue_lines.js`, `visitor_blocker_lines.js` |
 | `dev/` | Dev editors (loaded by index.html), `dev/tests/`, `dev/tools/` |
+
+## Move → code
+
+Combo/charge input detection for every move is in `combat.js`
+`updateMeleeAttackSystem`. The move itself:
+
+| Move | Code |
+| --- | --- |
+| Slash (A) | `executeBasicMeleeAttack` |
+| Dash (B) | `updateDashMovement`; started in `updateMeleeAttackSystem` |
+| Blast (charge A) | `executeDivineShot` |
+| Crash (charge B) | `executeProtectedDash` |
+| Smash (B→A) | `executeRushAttack`, `updateRushMovement` |
+| Cleave (A→B) | `executeCleaveAttack` |
+| Reap (C→A) | `executeSpinAttack` |
+| Clash (C→B) | `forceStartHolyDash` (detected under "C/B Holy Dash") |
+| Thrash (charge B+A) | `executeSwordRush`, `updateThrashFlurry` |
+| Hedge (charge A+C) | `executeRingOfFireAttack` (`MOVE_NAME_AC_SUPER`) |
+| Trash (charge B+C) | `executeBlankaRoll` |
+| Unity Strike / Pastor Protect (C / C C) | `entities.js` (grep `"Unity Strike"`), `npcs.js` `triggerCongregationCommand` |
+| Purify (charge C) | `entities.js` `castPrayerBomb` |
+| Prayer Storm (charge A+B+C) | `updateMeleeAttackSystem` (grep `"Prayer Storm"`), `game.js` `startPrayerBombFireRain` |
 
 ## Common edits
 
