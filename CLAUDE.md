@@ -31,6 +31,7 @@ other branches → their own preview (use `/`, not `/index.html`).
 | `renderer.js` (~16k) | All drawing (`drawGame`, title, mission brief, recap, tutorial card/text near `drawTotalCongregationPill`) |
 | `hud.js` (~2.5k) | `drawHUD`, prayer meter, move banner, dev Moves List |
 | `input.js` (~1.9k) | Keyboard/gamepad/touch. A=ArrowLeft, B=ArrowDown, C=ArrowRight, Space=pause/select. Touch pad `configureArcControl` (`ABC_PAD_*` angles must match the `#arcControl` SVG in index.html), stick `configureVirtualJoystick` |
+| `cloud.js` + `functions/api/[[path]].js` | Cloud saves + sign-in on Cloudflare (D1 database, Pages Functions). `cloud.js` keeps the old `window.Cloud` interface (`initCloud`, `loadPlayerDoc`, `savePlayerDoc`, `resetPlayerProgress`, `signInWithGoogle`, `signOut`) and reports crashes to `/api/error`. Google popup returns to `auth/google/index.html` |
 | `entities.js` (~5k) | `Enemy` (`takeDamage`…), player `castPrayerBomb` |
 | `MapScreen.js`, `mapData.js` | Map screen |
 | `levels.js`, `spawner.js`, `level_data.js` | Waves and level data (edit level data with the dev level builder or targeted grep) |
@@ -69,6 +70,21 @@ Combo/charge input detection for every move is in `combat.js`
 - How a move behaves → `combat.js` (`execute<Move>`; names map via `move_catalog.js`).
 - Touch controls → `input.js`; their look → `style.css` + SVG in `index.html`.
 - On-screen text/HUD → `hud.js` / `renderer.js`.
+
+## Cloud (Cloudflare)
+
+- D1 databases: `battlechurch-saves` (main → test site) and
+  `battlechurch-saves-preview` (branch previews). Bindings and
+  `GOOGLE_CLIENT_ID` are in `wrangler.toml` (not the dashboard). Schema:
+  `db/schema.sql`. Tables: `players` (save JSON in `data`), `sessions`,
+  `errors` (crash reports, kept 90 days).
+- Query them: `python3 dev/tools/cf_d1.py prod|preview "SQL"` (uses the
+  Cloudflare API token; in cloud sessions the network proxy supplies it).
+- Run the API locally: `npx wrangler pages dev . --port 8788`, then
+  `BASE_URL=http://localhost:8788/ node dev/tests/cloud_saves.js`.
+  Sign-in logic test: `node --experimental-sqlite dev/tests/api_google.mjs`.
+- The plain test server (python) has no `/api`; the game must keep working
+  offline (cloud calls fail quietly).
 
 ## Moving or adding top-level code
 

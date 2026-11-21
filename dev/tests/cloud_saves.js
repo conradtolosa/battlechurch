@@ -56,8 +56,8 @@ const H = require("./helpers");
     google === "auth/operation-not-allowed" || google === "no error", google);
 
   // Crash reports reach the server.
-  const sent = page.waitForRequest((r) => r.url().endsWith("/api/error") && r.method() === "POST", { timeout: 5000 })
-    .then(() => true).catch(() => false);
+  const sent = page.waitForResponse((r) => r.url().endsWith("/api/error") && r.request().method() === "POST", { timeout: 8000 })
+    .then((r) => r.ok()).catch(() => false);
   await page.evaluate(() => setTimeout(() => { throw new Error("cloud_saves test crash"); }, 0));
   H.check("uncaught error is reported to /api/error", await sent);
 
