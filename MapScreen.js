@@ -4563,7 +4563,7 @@
   }
 
   // Dev-only: mark all 9 regular towns as P1-completed (100 congregation) in memory.
-  // Does NOT save to Firebase. Automatically unlocks the capital via ensureNextDistrictUnlocked.
+  // Does NOT save to the cloud. Automatically unlocks the capital via ensureNextDistrictUnlocked.
   function devUnlockAllDistricts() {
     const mapData = window.BattlechurchMapData;
     if (!mapData) return false;

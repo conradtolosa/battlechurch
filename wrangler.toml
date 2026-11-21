@@ -1,0 +1,24 @@
+# Cloudflare Pages settings for Battlechurch (bindings live here, not in the dashboard).
+# main -> production (test.battlechurch.com) uses battlechurch-saves;
+# every other branch preview uses battlechurch-saves-preview.
+name = "battlechurch"
+pages_build_output_dir = "."
+compatibility_date = "2025-12-31"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "battlechurch-saves-preview"
+database_id = "20a8846c-f37d-44cb-a232-002813d412a1"
+
+[vars]
+# OAuth web client ID from Google Cloud (not a secret).
+GOOGLE_CLIENT_ID = ""
+
+[env.production]
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "battlechurch-saves"
+database_id = "adeb9512-322a-431d-bdf9-80543d580f35"
+
+[env.production.vars]
+GOOGLE_CLIENT_ID = ""

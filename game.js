@@ -12541,10 +12541,10 @@ function handleTitleScreen() {
             } catch (e) {
               const code = e?.code || window.cloudLastAuthErrorCode || "";
               let message = "Google sign-in failed. Please try again.";
-              if (code === "auth/unauthorized-domain") {
-                message = "Google sign-in blocked: add this site domain in Firebase Auth > Settings > Authorized domains.";
-              } else if (code === "auth/operation-not-allowed") {
-                message = "Google sign-in is disabled in Firebase. Enable Google provider in Firebase Auth > Sign-in method.";
+              if (code === "auth/operation-not-allowed") {
+                message = "Google sign-in isn't set up on this site yet (GOOGLE_CLIENT_ID).";
+              } else if (code === "auth/invalid-credential") {
+                message = "Google sign-in couldn't be verified. Please try again.";
               } else if (code === "auth/popup-blocked") {
                 message = "Popup was blocked. Allow popups for this site and try again.";
               }

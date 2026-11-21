@@ -11,3 +11,5 @@
 # Ignore Zip files (Sprite packs you downloaded)
 *.zip
 *.rar
+# Cloudflare local dev state
+.wrangler/

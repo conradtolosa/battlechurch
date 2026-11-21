@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signing in…</title>
+<style>body{background:#0b0e16;color:#DFDFC4;font:16px sans-serif;display:grid;place-items:center;height:100vh;margin:0}</style>
+</head>
+<body>
+<p id="msg">Signing in…</p>
+<script>
+  // Google sends the player back here with the sign-in result in the URL
+  // fragment. Hand it to the game window that opened this popup, then close.
+  (function () {
+    var p = new URLSearchParams(location.hash.slice(1));
+    var data = { type: "battlechurch-google", state: p.get("state"), idToken: p.get("id_token"), error: p.get("error") };
+    if (window.opener) {
+      window.opener.postMessage(data, location.origin);
+      window.close();
+    } else {
+      document.getElementById("msg").textContent = "Sign-in finished. You can close this window.";
+    }
+  })();
+</script>
+</body>
+</html>
