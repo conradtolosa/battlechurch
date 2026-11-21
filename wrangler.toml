@@ -12,7 +12,7 @@ database_id = "20a8846c-f37d-44cb-a232-002813d412a1"
 
 [vars]
 # OAuth web client ID from Google Cloud (not a secret).
-GOOGLE_CLIENT_ID = ""
+GOOGLE_CLIENT_ID = "657219537020-55sl0suu0qg3cpco1206mg7o5hidugod.apps.googleusercontent.com"
 
 [env.production]
 [[env.production.d1_databases]]
@@ -21,4 +21,4 @@ database_name = "battlechurch-saves"
 database_id = "adeb9512-322a-431d-bdf9-80543d580f35"
 
 [env.production.vars]
-GOOGLE_CLIENT_ID = ""
+GOOGLE_CLIENT_ID = "657219537020-55sl0suu0qg3cpco1206mg7o5hidugod.apps.googleusercontent.com"
